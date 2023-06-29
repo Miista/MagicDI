@@ -26,15 +26,27 @@ namespace Sandbox
 
     class SomeService
     {
-        private readonly DateTime _time = DateTime.Now;
-        
+        private readonly DateProvider _time;
+
+        public SomeService(DateProvider time)
+        {
+            _time = time ?? throw new ArgumentNullException(nameof(time));
+        }
+
         public bool SomeMethod()
         {
-            Console.WriteLine(_time);
+            Console.WriteLine(_time.Get());
             return true;
         }
     }
 
+    class DateProvider
+    {
+        private readonly DateTime _now = DateTime.Now;
+        
+        public DateTime Get() => _now;
+    }
+    
     class MagicDI
     {
         private class InstanceRegistry
@@ -116,7 +128,7 @@ namespace Sandbox
             return constructorInfo
                 .GetParameters()
                 .Select(info => info.ParameterType)
-                .Select(ResolveInstance)
+                .Select(Resolve)
                 .ToArray();
         }
 
