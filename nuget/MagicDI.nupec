@@ -19,13 +19,13 @@
 	</releaseNotes>
 
     <dependencies>
-      <group targetFramework="net8.0" />
+      <group targetFramework="netstandard2.0" />
     </dependencies>
   </metadata>
 
   <files>
-    <file src="net8.0\*.dll" target="lib\net8.0" />
-    <file src="net8.0\*.xml" target="lib\net8.0" />
+    <file src="netstandard2.0\*.dll" target="lib\netstandard2.0" />
+    <file src="netstandard2.0\*.xml" target="lib\netstandard2.0" />
 	<file src="..\..\..\..\README.md" target="docs\" />
   </files>
 </package>
