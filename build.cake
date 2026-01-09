@@ -37,7 +37,7 @@ Task("Pack")
   .IsDependentOn("Test")
   .Does(() =>
 {
-  Pack("MagicDI", new [] { "netstandard2.0" });
+  Pack("MagicDI", new [] { "net8.0" });
 })
 ;
 
