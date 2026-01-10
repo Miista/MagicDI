@@ -19,7 +19,16 @@ namespace MagicDI
         /// </summary>
         /// <typeparam name="T">The type to resolve.</typeparam>
         /// <returns>An instance of the specified type.</returns>
-        public T Resolve<T>() => (T)Resolve(typeof(T));
+        public T Resolve<T>()
+        {
+            var resolved = Resolve(typeof(T));
+
+            if (resolved is T result)
+                return result;
+
+            throw new InvalidOperationException(
+                $"Failed to cast resolved instance of type {resolved?.GetType().Name ?? "null"} to requested type {typeof(T).Name}");
+        }
 
         private object Resolve(Type type)
         {
