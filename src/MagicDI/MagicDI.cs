@@ -19,7 +19,16 @@ namespace MagicDI
         /// </summary>
         /// <typeparam name="T">The type to resolve.</typeparam>
         /// <returns>An instance of the specified type.</returns>
-        public T Resolve<T>() => (T)Resolve(typeof(T));
+        public T Resolve<T>()
+        {
+            var resolved = Resolve(typeof(T));
+
+            if (resolved is T result)
+                return result;
+
+            throw new InvalidOperationException(
+                $"Failed to cast resolved instance of type {resolved?.GetType().Name ?? "null"} to requested type {typeof(T).Name}");
+        }
 
         private object Resolve(Type type)
         {
@@ -67,12 +76,23 @@ namespace MagicDI
             // 3. Invoke constructor
             var instance = constructorInfo.Invoke(resolvedConstructorArguments);
 
+            if (instance == null)
+                throw new InvalidOperationException(
+                    $"Constructor invocation for type {type.Name} returned null");
+
             return instance;
         }
 
         private ConstructorInfo GetConstructor(Type type)
         {
-            var appropriateConstructor = type.GetConstructors().OrderByDescending(info => info.GetParameters().Length).FirstOrDefault();
+            var appropriateConstructor = type.GetConstructors()
+                .OrderByDescending(info => info.GetParameters().Length)
+                .ThenBy(info => info.MetadataToken)
+                .FirstOrDefault();
+
+            if (appropriateConstructor == null)
+                throw new InvalidOperationException(
+                    $"Cannot resolve instance of type {type.Name} because it has no public constructors");
 
             return appropriateConstructor;
         }
