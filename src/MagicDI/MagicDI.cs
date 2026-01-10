@@ -76,6 +76,10 @@ namespace MagicDI
             // 3. Invoke constructor
             var instance = constructorInfo.Invoke(resolvedConstructorArguments);
 
+            if (instance == null)
+                throw new InvalidOperationException(
+                    $"Constructor invocation for type {type.Name} returned null");
+
             return instance;
         }
 
