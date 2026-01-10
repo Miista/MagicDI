@@ -85,7 +85,10 @@ namespace MagicDI
 
         private ConstructorInfo GetConstructor(Type type)
         {
-            var appropriateConstructor = type.GetConstructors().OrderByDescending(info => info.GetParameters().Length).FirstOrDefault();
+            var appropriateConstructor = type.GetConstructors()
+                .OrderByDescending(info => info.GetParameters().Length)
+                .ThenBy(info => info.MetadataToken)
+                .FirstOrDefault();
 
             if (appropriateConstructor == null)
                 throw new InvalidOperationException(
