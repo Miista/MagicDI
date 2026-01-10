@@ -74,6 +74,10 @@ namespace MagicDI
         {
             var appropriateConstructor = type.GetConstructors().OrderByDescending(info => info.GetParameters().Length).FirstOrDefault();
 
+            if (appropriateConstructor == null)
+                throw new InvalidOperationException(
+                    $"Cannot resolve instance of type {type.Name} because it has no public constructors");
+
             return appropriateConstructor;
         }
 
