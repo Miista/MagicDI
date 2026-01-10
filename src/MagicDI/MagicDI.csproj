@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+
+    <!-- Package metadata -->
+    <PackageId>MagicDI</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Søren Guldmund</Authors>
+    <Description>A lightweight, reflection-based dependency injection container for .NET with zero configuration.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Miista/MagicDI</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Miista/MagicDI</RepositoryUrl>
+    <PackageTags>dependency-injection;di;ioc;container;reflection</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- Build options -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+  </ItemGroup>
+</Project>
