@@ -30,6 +30,13 @@ namespace MagicDI
                 $"Failed to cast resolved instance of type {resolved?.GetType().Name ?? "null"} to requested type {typeof(T).Name}");
         }
 
+        /// <summary>
+        /// Resolves an instance of the specified type by checking the cache first,
+        /// then creating a new instance if not found.
+        /// </summary>
+        /// <param name="type">The type to resolve.</param>
+        /// <returns>An instance of the specified type.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when an unknown lifetime is encountered.</exception>
         private object Resolve(Type type)
         {
             // 0. Check if we have already resolved the instance
@@ -61,6 +68,14 @@ namespace MagicDI
             return registry.Value;
         }
 
+        /// <summary>
+        /// Creates a new instance of the specified type by finding and invoking the appropriate constructor.
+        /// </summary>
+        /// <param name="type">The type to instantiate.</param>
+        /// <returns>A new instance of the specified type.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when the type is a primitive type or when constructor invocation returns null.
+        /// </exception>
         private object ResolveInstance(Type type)
         {
             if (type.IsPrimitive)
@@ -83,6 +98,13 @@ namespace MagicDI
             return instance;
         }
 
+        /// <summary>
+        /// Gets the most appropriate constructor for the specified type.
+        /// Selects the constructor with the most parameters, using metadata token order as a tiebreaker.
+        /// </summary>
+        /// <param name="type">The type to get the constructor for.</param>
+        /// <returns>The selected constructor.</returns>
+        /// <exception cref="InvalidOperationException">Thrown when the type has no public constructors.</exception>
         private ConstructorInfo GetConstructor(Type type)
         {
             var appropriateConstructor = type.GetConstructors()
@@ -97,6 +119,11 @@ namespace MagicDI
             return appropriateConstructor;
         }
 
+        /// <summary>
+        /// Resolves all constructor parameters by recursively resolving each parameter type.
+        /// </summary>
+        /// <param name="constructorInfo">The constructor whose parameters should be resolved.</param>
+        /// <returns>An array of resolved parameter instances.</returns>
         private object[] ResolveConstructorArguments(ConstructorInfo constructorInfo)
         {
             return constructorInfo
@@ -106,6 +133,12 @@ namespace MagicDI
                 .ToArray();
         }
 
+        /// <summary>
+        /// Determines the lifetime for a resolved instance.
+        /// Currently always returns <see cref="Lifetime.Singleton"/>.
+        /// </summary>
+        /// <param name="instance">The resolved instance (currently unused).</param>
+        /// <returns>The lifetime to use for caching the instance.</returns>
         private Lifetime DetermineLifeTime(object instance)
         {
             return Lifetime.Singleton;
