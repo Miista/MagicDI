@@ -8,111 +8,87 @@ namespace MagicDI.Tests
         public class General
         {
             [Fact]
-            public void Resolve_SimpleType_ReturnsInstance()
+            public void ResolvesSimpleTypeSuccessfully()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act
                 var instance = di.Resolve<SimpleClass>();
 
-                // Assert
                 Assert.NotNull(instance);
             }
 
             [Fact]
-            public void Resolve_TypeWithDependency_ResolvesDependency()
+            public void ResolvesDependenciesAutomatically()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act
                 var instance = di.Resolve<ClassWithDependency>();
 
-                // Assert
                 Assert.NotNull(instance);
                 Assert.NotNull(instance.Dependency);
             }
 
             [Fact]
-            public void Resolve_Singleton_ReturnsSameInstance()
+            public void ReturnsSameInstanceForSingletonLifetime()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act
                 var instance1 = di.Resolve<SimpleClass>();
                 var instance2 = di.Resolve<SimpleClass>();
 
-                // Assert
                 Assert.Same(instance1, instance2);
             }
 
             [Fact]
-            public void Resolve_NestedDependencies_ResolvesAll()
+            public void ResolvesNestedDependenciesRecursively()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act
                 var instance = di.Resolve<ClassWithNestedDependency>();
 
-                // Assert
                 Assert.NotNull(instance);
                 Assert.NotNull(instance.Dependency);
                 Assert.NotNull(instance.Dependency.Dependency);
             }
 
             [Fact]
-            public void Resolve_MultipleConstructorParameters_ResolvesAll()
+            public void ResolvesAllConstructorParameters()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act
                 var instance = di.Resolve<ClassWithMultipleDependencies>();
 
-                // Assert
                 Assert.NotNull(instance);
                 Assert.NotNull(instance.Dependency1);
                 Assert.NotNull(instance.Dependency2);
             }
 
             [Fact]
-            public void Resolve_DependencySharedAcrossTypes_ReturnsSameInstance()
+            public void SharesSingletonInstancesAcrossDependencyGraphs()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act
                 var instance1 = di.Resolve<ClassWithDependency>();
                 var instance2 = di.Resolve<ClassWithNestedDependency>();
 
-                // Assert
-                // The SimpleClass dependency should be the same instance (singleton)
                 Assert.Same(instance1.Dependency, instance2.Dependency.Dependency);
             }
 
             [Fact]
-            public void Resolve_PrimitiveType_ThrowsInvalidOperationException()
+            public void ThrowsWhenResolvingPrimitiveTypes()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act & Assert
                 Assert.Throws<InvalidOperationException>(() => di.Resolve<int>());
             }
 
             [Fact]
-            public void Resolve_ConstructorSelectsMostParameters()
+            public void SelectsConstructorWithMostParameters()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act
                 var instance = di.Resolve<ClassWithMultipleConstructors>();
 
-                // Assert
                 Assert.NotNull(instance);
                 Assert.NotNull(instance.Dependency1);
                 Assert.NotNull(instance.Dependency2);
@@ -120,36 +96,29 @@ namespace MagicDI.Tests
             }
 
             [Fact]
-            public void Resolve_TypeWithNoPublicConstructors_ThrowsInvalidOperationException()
+            public void ThrowsWhenTypeHasNoPublicConstructors()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act & Assert
                 var exception = Assert.Throws<InvalidOperationException>(() => di.Resolve<ClassWithNoPublicConstructor>());
                 Assert.Contains("no public constructors", exception.Message);
             }
 
             [Fact]
-            public void Resolve_ConstructorThrowsException_ThrowsTargetInvocationException()
+            public void PropagatesExceptionsThrownByConstructors()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act & Assert
                 Assert.Throws<System.Reflection.TargetInvocationException>(() => di.Resolve<ClassWithThrowingConstructor>());
             }
 
             [Fact]
-            public void Resolve_DeepDependencyChain_ResolvesSuccessfully()
+            public void ResolvesDeepDependencyChains()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act
                 var instance = di.Resolve<DeepLevel5>();
 
-                // Assert
                 Assert.NotNull(instance);
                 Assert.NotNull(instance.Level4);
                 Assert.NotNull(instance.Level4.Level3);
@@ -158,32 +127,24 @@ namespace MagicDI.Tests
             }
 
             [Fact]
-            public void Resolve_MultipleConstructorsSameParameterCount_SelectsDeterministically()
+            public void SelectsConstructorDeterministicallyWhenParameterCountsMatch()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act - Resolve multiple times to ensure deterministic selection
                 var instance1 = di.Resolve<ClassWithSameParameterCountConstructors>();
                 var instance2 = di.Resolve<ClassWithSameParameterCountConstructors>();
 
-                // Assert - Should use the same constructor consistently
                 Assert.NotNull(instance1);
                 Assert.NotNull(instance2);
-
-                // Both should have used the same constructor (verified by consistent behavior)
             }
 
             [Fact]
-            public void Resolve_TypeCastFailure_ThrowsInvalidOperationException()
+            public void ReturnsCorrectTypeFromGenericResolve()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act - This tests the type safety in Resolve<T>
                 var instance = di.Resolve<SimpleClass>();
 
-                // Assert
                 Assert.NotNull(instance);
                 Assert.IsType<SimpleClass>(instance);
             }
