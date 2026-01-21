@@ -3,7 +3,7 @@ using Xunit;
 
 namespace MagicDI.Tests
 {
-    public class MagicDITests
+    public partial class MagicDITests
     {
         [Fact]
         public void Resolve_SimpleType_ReturnsInstance()
@@ -172,17 +172,6 @@ namespace MagicDI.Tests
         }
 
         [Fact]
-        public void Resolve_CircularDependency_ThrowsInvalidOperationException()
-        {
-            // Arrange
-            var di = new MagicDI();
-
-            // Act & Assert
-            var exception = Assert.Throws<InvalidOperationException>(() => di.Resolve<CircularA>());
-            Assert.Contains("circular", exception.Message, StringComparison.OrdinalIgnoreCase);
-        }
-
-        [Fact]
         public void Resolve_TypeCastFailure_ThrowsInvalidOperationException()
         {
             // Arrange
@@ -309,16 +298,6 @@ namespace MagicDI.Tests
                 // Different parameter type, same count
                 Dependency = dependency?.Dependency;
             }
-        }
-
-        public class CircularA
-        {
-            public CircularA(CircularB b) { }
-        }
-
-        public class CircularB
-        {
-            public CircularB(CircularA a) { }
         }
 
         #endregion
