@@ -12,13 +12,13 @@ namespace MagicDI
     /// </summary>
     public class MagicDI
     {
-        private readonly Dictionary<Type, InstanceRegistry> _registeredInstances = new Dictionary<Type, InstanceRegistry>();
+        private readonly Dictionary<Type, InstanceRegistry> _registeredInstances = new();
 
         /// <summary>
         /// Tracks types currently being resolved on each thread to detect circular dependencies.
         /// Using ThreadLocal ensures thread-safety for the resolution stack.
         /// </summary>
-        private readonly ThreadLocal<HashSet<Type>> _resolutionStack = new ThreadLocal<HashSet<Type>>(() => new HashSet<Type>());
+        private readonly ThreadLocal<HashSet<Type>> _resolutionStack = new(() => []);
 
         /// <summary>
         /// Resolves an instance of the specified type, automatically
@@ -52,7 +52,6 @@ namespace MagicDI
                 switch (instanceRegistry.Lifetime)
                 {
                     case Lifetime.Scoped:
-                        return ResolveInstance(type);
                     case Lifetime.Transient:
                         return ResolveInstance(type);
                     case Lifetime.Singleton:
@@ -64,7 +63,7 @@ namespace MagicDI
 
             var resolvedInstance = ResolveInstance(type);
 
-            // 4. Determine life time (Scoped, Transient, Singleton)
+            // 4. Determine lifetime (Scoped, Transient, Singleton)
             var lifetime = DetermineLifeTime(resolvedInstance);
 
             // 5. Register created instance
@@ -101,10 +100,10 @@ namespace MagicDI
             try
             {
                 // 1. Find the most appropriate constructor
-                ConstructorInfo constructorInfo = GetConstructor(type);
+                var constructorInfo = GetConstructor(type);
 
                 // 2. Resolve arguments to said constructor
-                object[] resolvedConstructorArguments = ResolveConstructorArguments(constructorInfo);
+                var resolvedConstructorArguments = ResolveConstructorArguments(constructorInfo);
 
                 // 3. Invoke constructor
                 var instance = constructorInfo.Invoke(resolvedConstructorArguments);
@@ -159,10 +158,12 @@ namespace MagicDI
 
         /// <summary>
         /// Determines the lifetime for a resolved instance using the following priority:
-        /// 1. Explicit [Lifetime] attribute override (with captive dependency validation)
-        /// 2. IDisposable types → Transient
-        /// 3. Cascade from dependencies (least cacheable wins)
-        /// 4. No dependencies → Singleton
+        /// <list type="number">
+        /// <item>Explicit [Lifetime] attribute override (with captive dependency validation)</item>
+        /// <item>IDisposable types → Transient</item>
+        /// <item>Cascade from dependencies (least cacheable wins)</item>
+        /// <item>No dependencies → Singleton</item>
+        /// </list>
         /// </summary>
         /// <param name="instance">The resolved instance to determine lifetime for.</param>
         /// <returns>The inferred or explicitly specified lifetime.</returns>
