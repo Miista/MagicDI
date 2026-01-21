@@ -9,33 +9,21 @@ namespace MagicDI.Tests
         {
 
             [Fact]
-            public void Resolve_CircularDependency_ThrowsInvalidOperationException()
+            public void ThrowsWhenDirectCircularDependencyDetected()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act & Assert
                 var exception = Assert.Throws<InvalidOperationException>(() => di.Resolve<CircularA>());
                 Assert.Contains("circular", exception.Message, StringComparison.OrdinalIgnoreCase);
             }
 
             #region Issue 3: Circular Dependency Detection
 
-            /// <summary>
-            /// Reveals: Circular dependency should throw descriptive exception,
-            /// not cause StackOverflowException.
-            /// Note: This test cannot actually run the circular resolution because
-            /// StackOverflowException terminates the process.
-            /// </summary>
             [Fact]
-            public void CircularDependency_DirectCircle_ShouldThrowDescriptiveException()
+            public void ThrowsDescriptiveExceptionForDirectCircle()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act & Assert
-                // Should throw InvalidOperationException with message about circular dependency
-                // Currently causes StackOverflowException which crashes the test process
                 var exception = Assert.Throws<InvalidOperationException>(() =>
                     di.Resolve<CircularClassA>()
                 );
@@ -43,16 +31,11 @@ namespace MagicDI.Tests
                 Assert.Contains("circular", exception.Message, StringComparison.OrdinalIgnoreCase);
             }
 
-            /// <summary>
-            /// Reveals: Indirect circular dependency (A -> B -> C -> A) should be detected.
-            /// </summary>
             [Fact]
-            public void CircularDependency_IndirectCircle_ShouldThrowDescriptiveException()
+            public void DetectsIndirectCircularDependencies()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act & Assert
                 var exception = Assert.Throws<InvalidOperationException>(() =>
                     di.Resolve<IndirectCircularA>()
                 );
@@ -60,16 +43,11 @@ namespace MagicDI.Tests
                 Assert.Contains("circular", exception.Message, StringComparison.OrdinalIgnoreCase);
             }
 
-            /// <summary>
-            /// Reveals: Self-referencing type should be detected as circular.
-            /// </summary>
             [Fact]
-            public void CircularDependency_SelfReference_ShouldThrowDescriptiveException()
+            public void DetectsSelfReferencingTypes()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act & Assert
                 var exception = Assert.Throws<InvalidOperationException>(() =>
                     di.Resolve<SelfReferencingClass>()
                 );
@@ -77,39 +55,25 @@ namespace MagicDI.Tests
                 Assert.Contains("circular", exception.Message, StringComparison.OrdinalIgnoreCase);
             }
 
-            /// <summary>
-            /// Reveals: The exception message should include the dependency chain
-            /// to help developers identify where the cycle occurs.
-            /// </summary>
             [Fact]
-            public void CircularDependency_ExceptionMessage_ShouldIncludeDependencyChain()
+            public void IncludesDependencyChainInExceptionMessage()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act & Assert
                 var exception = Assert.Throws<InvalidOperationException>(() =>
                     di.Resolve<IndirectCircularA>()
                 );
 
-                // Should mention the types involved in the cycle
                 Assert.Contains("IndirectCircularA", exception.Message);
             }
 
-            /// <summary>
-            /// Reveals: After detecting circular dependency in one resolution,
-            /// subsequent resolutions of non-circular types should still work.
-            /// </summary>
             [Fact]
-            public void CircularDependency_AfterDetection_ContainerShouldRemainUsable()
+            public void RemainsUsableAfterCircularDependencyDetection()
             {
-                // Arrange
                 var di = new MagicDI();
 
-                // Act - Try to resolve circular dependency (should fail gracefully)
                 Assert.Throws<InvalidOperationException>(() => di.Resolve<CircularClassA>());
 
-                // Assert - Container should still work for valid types
                 var instance = di.Resolve<NonCircularClass>();
                 Assert.NotNull(instance);
             }
