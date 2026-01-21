@@ -142,19 +142,6 @@ namespace MagicDI.Tests
                     instance1.Should().NotBeSameAs(instance2, because: "[Lifetime(Transient)] attribute forces transient behavior");
                 }
 
-                [Fact]
-                public void Singleton_attribute_overrides_transient_cascade()
-                {
-                    // Arrange
-                    var di = new MagicDI();
-
-                    // Act
-                    var instance1 = di.Resolve<SingletonWithTransientDep>();
-                    var instance2 = di.Resolve<SingletonWithTransientDep>();
-
-                    // Assert
-                    instance1.Should().BeSameAs(instance2, because: "[Lifetime(Singleton)] attribute overrides transient cascade from dependencies");
-                }
             }
 
             public class InferencePriority
@@ -171,20 +158,6 @@ namespace MagicDI.Tests
 
                     // Assert
                     instance1.Should().BeSameAs(instance2, because: "attribute (priority 1) beats IDisposable inference (priority 2)");
-                }
-
-                [Fact]
-                public void Attribute_takes_priority_over_dependency_cascade()
-                {
-                    // Arrange
-                    var di = new MagicDI();
-
-                    // Act - SingletonWithTransientDep has transient dep but [Lifetime(Singleton)]
-                    var instance1 = di.Resolve<SingletonWithTransientDep>();
-                    var instance2 = di.Resolve<SingletonWithTransientDep>();
-
-                    // Assert
-                    instance1.Should().BeSameAs(instance2, because: "attribute (priority 1) beats dependency cascade (priority 3)");
                 }
 
                 [Fact]
@@ -242,6 +215,64 @@ namespace MagicDI.Tests
                 public class DisposableWithSingletonAttr : IDisposable
                 {
                     public void Dispose() { }
+                }
+            }
+
+            public class CaptiveDependency
+            {
+                [Fact]
+                public void Throws_when_explicit_singleton_depends_on_transient()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<SingletonWithTransientDep>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*Captive dependency detected*", because: "explicit singleton with transient dependency is a configuration error");
+                }
+
+                [Fact]
+                public void Exception_message_includes_type_names()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<SingletonWithTransientDep>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*SingletonWithTransientDep*")
+                        .WithMessage("*DisposableClass*", because: "exception should identify both the singleton and its transient dependency");
+                }
+
+                [Fact]
+                public void Does_not_throw_when_singleton_depends_on_singleton()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<ClassWithSingletonDeps>();
+
+                    // Assert
+                    act.Should().NotThrow(because: "singleton depending on singleton is valid");
+                }
+
+                [Fact]
+                public void Does_not_throw_for_inferred_transient_cascade()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - No explicit attribute, so cascade is fine
+                    Action act = () => di.Resolve<ClassDependingOnDisposable>();
+
+                    // Assert
+                    act.Should().NotThrow(because: "inferred transient cascade without explicit attribute is valid");
                 }
             }
 
