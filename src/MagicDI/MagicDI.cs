@@ -129,7 +129,7 @@ namespace MagicDI
         /// <param name="type">The type to get the constructor for.</param>
         /// <returns>The selected constructor.</returns>
         /// <exception cref="InvalidOperationException">Thrown when the type has no public constructors.</exception>
-        private ConstructorInfo GetConstructor(Type type)
+        private static ConstructorInfo GetConstructor(Type type)
         {
             var appropriateConstructor = type.GetConstructors()
                 .OrderByDescending(info => info.GetParameters().Length)
