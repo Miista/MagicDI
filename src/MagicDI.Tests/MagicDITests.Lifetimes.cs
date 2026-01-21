@@ -21,7 +21,7 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<LeafClass>();
 
                     // Assert
-                    instance1.Should().BeSameAs(instance2, because: "leaf classes with no dependencies default to singleton");
+                    instance1.Should().BeSameAs(instance2, because: "types with no dependencies default to singleton");
                 }
             }
 
