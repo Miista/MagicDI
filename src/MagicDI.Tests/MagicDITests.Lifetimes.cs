@@ -114,38 +114,6 @@ namespace MagicDI.Tests
                 }
             }
 
-            public class AttributeOverrides
-            {
-                [Fact]
-                public void Singleton_attribute_overrides_disposable_inference()
-                {
-                    // Arrange
-                    var di = new MagicDI();
-
-                    // Act
-                    var instance1 = di.Resolve<DisposableSingletonClass>();
-                    var instance2 = di.Resolve<DisposableSingletonClass>();
-
-                    // Assert
-                    instance1.Should().BeSameAs(instance2, because: "[Lifetime(Singleton)] attribute overrides IDisposable inference");
-                }
-
-                [Fact]
-                public void Transient_attribute_is_respected()
-                {
-                    // Arrange
-                    var di = new MagicDI();
-
-                    // Act
-                    var instance1 = di.Resolve<ExplicitTransientClass>();
-                    var instance2 = di.Resolve<ExplicitTransientClass>();
-
-                    // Assert
-                    instance1.Should().NotBeSameAs(instance2, because: "[Lifetime(Transient)] attribute forces transient behavior");
-                }
-
-            }
-
             public class InferencePriority
             {
                 [Fact]
@@ -160,6 +128,20 @@ namespace MagicDI.Tests
 
                     // Assert
                     instance1.Should().BeSameAs(instance2, because: "attribute (priority 1) beats IDisposable inference (priority 2)");
+                }
+
+                [Fact]
+                public void Transient_attribute_overrides_default_singleton_for_leaf_node()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    var instance1 = di.Resolve<ExplicitTransientClass>();
+                    var instance2 = di.Resolve<ExplicitTransientClass>();
+
+                    // Assert
+                    instance1.Should().NotBeSameAs(instance2, because: "[Lifetime(Transient)] attribute overrides the default singleton inference for leaf nodes");
                 }
 
                 [Fact]
@@ -360,12 +342,6 @@ namespace MagicDI.Tests
                 {
                     Disposable = disposable;
                 }
-            }
-
-            [Lifetime(Lifetime.Singleton)]
-            public class DisposableSingletonClass : IDisposable
-            {
-                public void Dispose() { }
             }
 
             [Lifetime(Lifetime.Transient)]
