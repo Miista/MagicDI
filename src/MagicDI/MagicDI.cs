@@ -158,13 +158,41 @@ namespace MagicDI
         }
 
         /// <summary>
-        /// Determines the lifetime for a resolved instance.
-        /// Currently always returns <see cref="Lifetime.Singleton"/>.
+        /// Determines the lifetime for a resolved instance using the following priority:
+        /// 1. Explicit [Lifetime] attribute override
+        /// 2. IDisposable types → Transient
+        /// 3. Cascade from dependencies (least cacheable wins)
+        /// 4. No dependencies → Singleton
         /// </summary>
-        /// <param name="instance">The resolved instance (currently unused).</param>
-        /// <returns>The lifetime to use for caching the instance.</returns>
+        /// <param name="instance">The resolved instance to determine lifetime for.</param>
+        /// <returns>The inferred or explicitly specified lifetime.</returns>
         private Lifetime DetermineLifeTime(object instance)
         {
+            var type = instance.GetType();
+
+            // 1. Check for explicit attribute override
+            var attr = type.GetCustomAttribute<LifetimeAttribute>();
+            if (attr != null)
+                return attr.Lifetime;
+
+            // 2. IDisposable → Transient
+            if (typeof(IDisposable).IsAssignableFrom(type))
+                return Lifetime.Transient;
+
+            // 3. Cascade from dependencies - use the least cacheable lifetime
+            var constructor = GetConstructor(type);
+            var dependencyTypes = constructor.GetParameters().Select(p => p.ParameterType);
+
+            foreach (var depType in dependencyTypes)
+            {
+                if (_registeredInstances.TryGetValue(depType, out var depRegistry))
+                {
+                    if (depRegistry.Lifetime == Lifetime.Transient)
+                        return Lifetime.Transient;
+                }
+            }
+
+            // 4. No deps or all deps Singleton → Singleton
             return Lifetime.Singleton;
         }
     }
