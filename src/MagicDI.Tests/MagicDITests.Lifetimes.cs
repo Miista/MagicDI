@@ -1,4 +1,5 @@
 using System;
+using FluentAssertions;
 using Xunit;
 
 namespace MagicDI.Tests
@@ -10,7 +11,7 @@ namespace MagicDI.Tests
             public class LeafNodes
             {
                 [Fact]
-                public void Leaf_classes_with_no_dependencies_are_singleton()
+                public void Type_with_no_dependencies_is_singleton()
                 {
                     // Arrange
                     var di = new MagicDI();
@@ -27,7 +28,7 @@ namespace MagicDI.Tests
             public class SingletonCascade
             {
                 [Fact]
-                public void Classes_with_all_singleton_dependencies_are_singleton()
+                public void Type_is_singleton_if_all_dependencies_are_singleton()
                 {
                     // Arrange
                     var di = new MagicDI();
@@ -44,7 +45,7 @@ namespace MagicDI.Tests
             public class TransientCascade
             {
                 [Fact]
-                public void Classes_depending_on_transient_become_transient()
+                public void Type_with_transient_dependency_becomes_transient()
                 {
                     // Arrange
                     var di = new MagicDI();
@@ -56,7 +57,7 @@ namespace MagicDI.Tests
                     // Assert
                     Assert.NotSame(instance1, instance2);
                 }
-
+                
                 [Fact]
                 public void Transient_dependencies_are_new_each_time()
                 {
@@ -184,7 +185,7 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<MixedDependenciesClass>();
 
                     // Assert
-                    Assert.NotSame(instance1, instance2);
+                    instance1.Should().NotBeSameAs(instance2, because: "the transient dependency makes the whole class transient");
                 }
 
                 [Fact]
@@ -209,16 +210,10 @@ namespace MagicDI.Tests
             public class SingletonDep1 { }
             public class SingletonDep2 { }
 
-            public class ClassWithSingletonDeps
+            public class ClassWithSingletonDeps(SingletonDep1 dep1, SingletonDep2 dep2)
             {
-                public SingletonDep1 Dep1 { get; }
-                public SingletonDep2 Dep2 { get; }
-
-                public ClassWithSingletonDeps(SingletonDep1 dep1, SingletonDep2 dep2)
-                {
-                    Dep1 = dep1;
-                    Dep2 = dep2;
-                }
+                public SingletonDep1 Dep1 { get; } = dep1;
+                public SingletonDep2 Dep2 { get; } = dep2;
             }
 
             public class DisposableClass : IDisposable
