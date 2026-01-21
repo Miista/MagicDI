@@ -35,34 +35,48 @@ namespace MagicDI
         /// </list>
         /// This method works recursively on type metadata without constructing instances.
         /// </summary>
-        /// <param name="type">The type to determine lifetime for.</param>
+        /// <param name="type">The type to determine lifetime for. Must be a concrete type.</param>
         /// <returns>The inferred or explicitly specified lifetime.</returns>
         /// <exception cref="InvalidOperationException">
         /// Thrown when a type is explicitly marked as Singleton but depends on a Transient type (captive dependency).
         /// </exception>
         public Lifetime DetermineLifetime(Type type)
         {
+            return DetermineLifetime(type, requestingType: null);
+        }
+
+        /// <summary>
+        /// Determines the lifetime for a type with context for interface resolution.
+        /// </summary>
+        /// <param name="type">The type to determine lifetime for.</param>
+        /// <param name="requestingType">The type requesting this resolution, used for interface lookup.</param>
+        /// <returns>The inferred or explicitly specified lifetime.</returns>
+        internal Lifetime DetermineLifetime(Type type, Type? requestingType)
+        {
+            // Resolve interface/abstract to concrete type
+            var concreteType = ImplementationFinder.GetConcreteType(type, requestingType);
+
             // Already determined?
-            if (_lifetimes.TryGetValue(type, out var cached))
+            if (_lifetimes.TryGetValue(concreteType, out var cached))
                 return cached;
 
             // Check for circular dependency in lifetime analysis
-            if (!_lifetimeStack.Value.Add(type))
+            if (!_lifetimeStack.Value.Add(concreteType))
             {
-                var chain = string.Join(" -> ", _lifetimeStack.Value.Select(t => t.Name)) + " -> " + type.Name;
+                var chain = string.Join(" -> ", _lifetimeStack.Value.Select(t => t.Name)) + " -> " + concreteType.Name;
                 throw new InvalidOperationException(
-                    $"Circular dependency detected while resolving {type.Name}. Resolution chain: {chain}");
+                    $"Circular dependency detected while resolving {concreteType.Name}. Resolution chain: {chain}");
             }
 
             try
             {
-                var attr = type.GetCustomAttribute<LifetimeAttribute>();
+                var attr = concreteType.GetCustomAttribute<LifetimeAttribute>();
 
                 // Recursively determine dependency lifetimes
-                var constructor = ConstructorSelector.GetConstructor(type);
+                var constructor = ConstructorSelector.GetConstructor(concreteType);
                 var transientDependency = constructor.GetParameters()
                     .Select(p => p.ParameterType)
-                    .FirstOrDefault(depType => DetermineLifetime(depType) == Lifetime.Transient);
+                    .FirstOrDefault(depType => DetermineLifetime(depType, requestingType: concreteType) == Lifetime.Transient);
 
                 Lifetime lifetime;
 
@@ -73,15 +87,15 @@ namespace MagicDI
                     if (attr.Lifetime == Lifetime.Singleton && transientDependency != null)
                     {
                         throw new InvalidOperationException(
-                            $"Captive dependency detected: Singleton '{type.Name}' depends on Transient '{transientDependency.Name}'. " +
+                            $"Captive dependency detected: Singleton '{concreteType.Name}' depends on Transient '{transientDependency.Name}'. " +
                             $"This would cause the transient instance to be captured and never released. " +
-                            $"Either remove the [Lifetime(Singleton)] attribute from '{type.Name}', or mark '{transientDependency.Name}' as Singleton.");
+                            $"Either remove the [Lifetime(Singleton)] attribute from '{concreteType.Name}', or mark '{transientDependency.Name}' as Singleton.");
                     }
 
                     lifetime = attr.Lifetime;
                 }
                 // 2. IDisposable → Transient
-                else if (typeof(IDisposable).IsAssignableFrom(type))
+                else if (typeof(IDisposable).IsAssignableFrom(concreteType))
                 {
                     lifetime = Lifetime.Transient;
                 }
@@ -96,12 +110,12 @@ namespace MagicDI
                     lifetime = Lifetime.Singleton;
                 }
 
-                _lifetimes[type] = lifetime;
+                _lifetimes[concreteType] = lifetime;
                 return lifetime;
             }
             finally
             {
-                _lifetimeStack.Value.Remove(type);
+                _lifetimeStack.Value.Remove(concreteType);
             }
         }
     }
