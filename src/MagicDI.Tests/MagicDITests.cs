@@ -10,152 +10,190 @@ namespace MagicDI.Tests
         public class General
         {
             [Fact]
-            public void ResolvesSimpleTypeSuccessfully()
+            public void Resolves_simple_type_successfully()
             {
+                // Arrange
                 var di = new MagicDI();
 
+                // Act
                 var instance = di.Resolve<SimpleClass>();
 
-                instance.Should().NotBeNull("the container should create instances of simple types without dependencies");
+                // Assert
+                instance.Should().NotBeNull(because: "the container should create instances of simple types without dependencies");
             }
 
             [Fact]
-            public void ResolvesDependenciesAutomatically()
+            public void Resolves_dependencies_automatically()
             {
+                // Arrange
                 var di = new MagicDI();
 
+                // Act
                 var instance = di.Resolve<ClassWithDependency>();
 
-                instance.Should().NotBeNull("the container should create the requested type");
-                instance.Dependency.Should().NotBeNull("the container should automatically resolve and inject constructor dependencies");
+                // Assert
+                instance.Should().NotBeNull(because: "the container should create the requested type");
+                instance.Dependency.Should().NotBeNull(because: "the container should automatically resolve and inject constructor dependencies");
             }
 
             [Fact]
-            public void ReturnsSameInstanceForSingletonLifetime()
+            public void Returns_same_instance_for_singleton_lifetime()
             {
+                // Arrange
                 var di = new MagicDI();
 
+                // Act
                 var instance1 = di.Resolve<SimpleClass>();
                 var instance2 = di.Resolve<SimpleClass>();
 
-                instance1.Should().BeSameAs(instance2, "singleton lifetime means the same instance is returned for all resolutions");
+                // Assert
+                instance1.Should().BeSameAs(instance2, because: "singleton lifetime means the same instance is returned for all resolutions");
             }
 
             [Fact]
-            public void ResolvesNestedDependenciesRecursively()
+            public void Resolves_nested_dependencies_recursively()
             {
+                // Arrange
                 var di = new MagicDI();
 
+                // Act
                 var instance = di.Resolve<ClassWithNestedDependency>();
 
-                instance.Should().NotBeNull("the container should create the top-level type");
-                instance.Dependency.Should().NotBeNull("the container should resolve first-level dependencies");
-                instance.Dependency.Dependency.Should().NotBeNull("the container should recursively resolve nested dependencies");
+                // Assert
+                instance.Should().NotBeNull(because: "the container should create the top-level type");
+                instance.Dependency.Should().NotBeNull(because: "the container should resolve first-level dependencies");
+                instance.Dependency.Dependency.Should().NotBeNull(because: "the container should recursively resolve nested dependencies");
             }
 
             [Fact]
-            public void ResolvesAllConstructorParameters()
+            public void Resolves_all_constructor_parameters()
             {
+                // Arrange
                 var di = new MagicDI();
 
+                // Act
                 var instance = di.Resolve<ClassWithMultipleDependencies>();
 
-                instance.Should().NotBeNull("the container should create types with multiple constructor parameters");
-                instance.Dependency1.Should().NotBeNull("the container should resolve the first constructor parameter");
-                instance.Dependency2.Should().NotBeNull("the container should resolve the second constructor parameter");
+                // Assert
+                instance.Should().NotBeNull(because: "the container should create types with multiple constructor parameters");
+                instance.Dependency1.Should().NotBeNull(because: "the container should resolve the first constructor parameter");
+                instance.Dependency2.Should().NotBeNull(because: "the container should resolve the second constructor parameter");
             }
 
             [Fact]
-            public void SharesSingletonInstancesAcrossDependencyGraphs()
+            public void Shares_singleton_instances_across_dependency_graphs()
             {
+                // Arrange
                 var di = new MagicDI();
 
+                // Act
                 var instance1 = di.Resolve<ClassWithDependency>();
                 var instance2 = di.Resolve<ClassWithNestedDependency>();
 
-                instance1.Dependency.Should().BeSameAs(instance2.Dependency.Dependency,
-                    "singleton instances should be shared across different dependency graphs");
+                // Assert
+                instance1.Dependency.Should().BeSameAs(instance2.Dependency.Dependency, because: "singleton instances should be shared across different dependency graphs");
             }
 
             [Fact]
-            public void ThrowsWhenResolvingPrimitiveTypes()
+            public void Throws_when_resolving_primitive_types()
             {
+                // Arrange
                 var di = new MagicDI();
 
-                var act = () => di.Resolve<int>();
+                // Act
+                Action act = () => di.Resolve<int>();
 
-                act.Should().Throw<InvalidOperationException>("primitive types cannot be instantiated by the container");
+                // Assert
+                act.Should().Throw<InvalidOperationException>(because: "primitive types cannot be instantiated by the container");
             }
 
             [Fact]
-            public void SelectsConstructorWithMostParameters()
+            public void Selects_constructor_with_most_parameters()
             {
+                // Arrange
                 var di = new MagicDI();
 
+                // Act
                 var instance = di.Resolve<ClassWithMultipleConstructors>();
 
-                instance.Should().NotBeNull("the container should create the instance");
-                instance.Dependency1.Should().NotBeNull("the first dependency should be resolved");
-                instance.Dependency2.Should().NotBeNull("the second dependency should be resolved when using the larger constructor");
-                instance.UsedLargerConstructor.Should().BeTrue("the container should prefer constructors with more parameters to maximize dependency injection");
+                // Assert
+                instance.Should().NotBeNull(because: "the container should create the instance");
+                instance.Dependency1.Should().NotBeNull(because: "the first dependency should be resolved");
+                instance.Dependency2.Should().NotBeNull(because: "the second dependency should be resolved when using the larger constructor");
+                instance.UsedLargerConstructor.Should().BeTrue(because: "the container should prefer constructors with more parameters to maximize dependency injection");
             }
 
             [Fact]
-            public void ThrowsWhenTypeHasNoPublicConstructors()
+            public void Throws_when_type_has_no_public_constructors()
             {
+                // Arrange
                 var di = new MagicDI();
 
-                var act = () => di.Resolve<ClassWithNoPublicConstructor>();
+                // Act
+                Action act = () => di.Resolve<ClassWithNoPublicConstructor>();
 
-                act.Should().Throw<InvalidOperationException>("types without public constructors cannot be instantiated")
-                    .WithMessage("*no public constructors*", "the error message should explain why resolution failed");
+                // Assert
+                act.Should().Throw<InvalidOperationException>(because: "types without public constructors cannot be instantiated")
+                    .WithMessage("*no public constructors*", because: "the error message should explain why resolution failed");
             }
 
             [Fact]
-            public void PropagatesExceptionsThrownByConstructors()
+            public void Propagates_exceptions_thrown_by_constructors()
             {
+                // Arrange
                 var di = new MagicDI();
 
-                var act = () => di.Resolve<ClassWithThrowingConstructor>();
+                // Act
+                Action act = () => di.Resolve<ClassWithThrowingConstructor>();
 
-                act.Should().Throw<TargetInvocationException>("exceptions thrown during construction should propagate to the caller");
+                // Assert
+                act.Should().Throw<TargetInvocationException>(because: "exceptions thrown during construction should propagate to the caller");
             }
 
             [Fact]
-            public void ResolvesDeepDependencyChains()
+            public void Resolves_deep_dependency_chains()
             {
+                // Arrange
                 var di = new MagicDI();
 
+                // Act
                 var instance = di.Resolve<DeepLevel5>();
 
-                instance.Should().NotBeNull("the container should handle deep dependency chains");
-                instance.Level4.Should().NotBeNull("level 4 dependency should be resolved");
-                instance.Level4.Level3.Should().NotBeNull("level 3 dependency should be resolved");
-                instance.Level4.Level3.Level2.Should().NotBeNull("level 2 dependency should be resolved");
-                instance.Level4.Level3.Level2.Level1.Should().NotBeNull("level 1 dependency should be resolved at the bottom of the chain");
+                // Assert
+                instance.Should().NotBeNull(because: "the container should handle deep dependency chains");
+                instance.Level4.Should().NotBeNull(because: "level 4 dependency should be resolved");
+                instance.Level4.Level3.Should().NotBeNull(because: "level 3 dependency should be resolved");
+                instance.Level4.Level3.Level2.Should().NotBeNull(because: "level 2 dependency should be resolved");
+                instance.Level4.Level3.Level2.Level1.Should().NotBeNull(because: "level 1 dependency should be resolved at the bottom of the chain");
             }
 
             [Fact]
-            public void SelectsConstructorDeterministicallyWhenParameterCountsMatch()
+            public void Selects_constructor_deterministically_when_parameter_counts_match()
             {
+                // Arrange
                 var di = new MagicDI();
 
+                // Act
                 var instance1 = di.Resolve<ClassWithSameParameterCountConstructors>();
                 var instance2 = di.Resolve<ClassWithSameParameterCountConstructors>();
 
-                instance1.Should().NotBeNull("first resolution should succeed");
-                instance2.Should().NotBeNull("second resolution should succeed with consistent constructor selection");
+                // Assert
+                instance1.Should().NotBeNull(because: "first resolution should succeed");
+                instance2.Should().NotBeNull(because: "second resolution should succeed with consistent constructor selection");
             }
 
             [Fact]
-            public void ReturnsCorrectTypeFromGenericResolve()
+            public void Returns_correct_type_from_generic_resolve()
             {
+                // Arrange
                 var di = new MagicDI();
 
+                // Act
                 var instance = di.Resolve<SimpleClass>();
 
-                instance.Should().NotBeNull("resolution should succeed");
-                instance.Should().BeOfType<SimpleClass>("the generic Resolve<T> method should return the exact requested type");
+                // Assert
+                instance.Should().NotBeNull(because: "resolution should succeed");
+                instance.Should().BeOfType<SimpleClass>(because: "the generic Resolve<T> method should return the exact requested type");
             }
 
             #region Test Classes

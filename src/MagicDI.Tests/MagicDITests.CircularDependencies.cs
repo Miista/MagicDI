@@ -8,74 +8,92 @@ namespace MagicDI.Tests
     {
         public class CircularDependency
         {
-
             [Fact]
-            public void ThrowsWhenDirectCircularDependencyDetected()
+            public void Throws_when_direct_circular_dependency_detected()
             {
+                // Arrange
                 var di = new MagicDI();
 
-                var act = () => di.Resolve<CircularA>();
+                // Act
+                Action act = () => di.Resolve<CircularA>();
 
-                act.Should().Throw<InvalidOperationException>("direct circular dependencies must be detected to prevent stack overflow")
-                    .WithMessage("*circular*", "the error message should clearly indicate a circular dependency was found");
+                // Assert
+                act.Should().Throw<InvalidOperationException>(because: "direct circular dependencies must be detected to prevent stack overflow")
+                    .WithMessage("*circular*", because: "the error message should clearly indicate a circular dependency was found");
             }
 
             #region Issue 3: Circular Dependency Detection
 
             [Fact]
-            public void ThrowsDescriptiveExceptionForDirectCircle()
+            public void Throws_descriptive_exception_for_direct_circle()
             {
+                // Arrange
                 var di = new MagicDI();
 
-                var act = () => di.Resolve<CircularClassA>();
+                // Act
+                Action act = () => di.Resolve<CircularClassA>();
 
-                act.Should().Throw<InvalidOperationException>("A->B->A cycles must be detected before causing infinite recursion")
-                    .WithMessage("*circular*", "the exception message should mention 'circular' to help developers diagnose the issue");
+                // Assert
+                act.Should().Throw<InvalidOperationException>(because: "A->B->A cycles must be detected before causing infinite recursion")
+                    .WithMessage("*circular*", because: "the exception message should mention 'circular' to help developers diagnose the issue");
             }
 
             [Fact]
-            public void DetectsIndirectCircularDependencies()
+            public void Detects_indirect_circular_dependencies()
             {
+                // Arrange
                 var di = new MagicDI();
 
-                var act = () => di.Resolve<IndirectCircularA>();
+                // Act
+                Action act = () => di.Resolve<IndirectCircularA>();
 
-                act.Should().Throw<InvalidOperationException>("indirect cycles like A->B->C->A must be detected regardless of chain length")
-                    .WithMessage("*circular*", "even multi-hop cycles should produce a clear circular dependency message");
+                // Assert
+                act.Should().Throw<InvalidOperationException>(because: "indirect cycles like A->B->C->A must be detected regardless of chain length")
+                    .WithMessage("*circular*", because: "even multi-hop cycles should produce a clear circular dependency message");
             }
 
             [Fact]
-            public void DetectsSelfReferencingTypes()
+            public void Detects_self_referencing_types()
             {
+                // Arrange
                 var di = new MagicDI();
 
-                var act = () => di.Resolve<SelfReferencingClass>();
+                // Act
+                Action act = () => di.Resolve<SelfReferencingClass>();
 
-                act.Should().Throw<InvalidOperationException>("a type depending on itself is the simplest form of circular dependency")
-                    .WithMessage("*circular*", "self-references should be reported as circular dependencies");
+                // Assert
+                act.Should().Throw<InvalidOperationException>(because: "a type depending on itself is the simplest form of circular dependency")
+                    .WithMessage("*circular*", because: "self-references should be reported as circular dependencies");
             }
 
             [Fact]
-            public void IncludesDependencyChainInExceptionMessage()
+            public void Includes_dependency_chain_in_exception_message()
             {
+                // Arrange
                 var di = new MagicDI();
 
-                var act = () => di.Resolve<IndirectCircularA>();
+                // Act
+                Action act = () => di.Resolve<IndirectCircularA>();
 
+                // Assert
                 act.Should().Throw<InvalidOperationException>()
-                    .WithMessage("*IndirectCircularA*", "the exception message should include the type names involved to help developers locate the cycle");
+                    .WithMessage("*IndirectCircularA*", because: "the exception message should include the type names involved to help developers locate the cycle");
             }
 
             [Fact]
-            public void RemainsUsableAfterCircularDependencyDetection()
+            public void Remains_usable_after_circular_dependency_detection()
             {
+                // Arrange
                 var di = new MagicDI();
 
-                var failedResolution = () => di.Resolve<CircularClassA>();
-                failedResolution.Should().Throw<InvalidOperationException>("circular dependency should be detected");
+                // Act
+                Action failedResolution = () => di.Resolve<CircularClassA>();
+                failedResolution.Should().Throw<InvalidOperationException>(because: "circular dependency should be detected");
 
                 var instance = di.Resolve<NonCircularClass>();
-                instance.Should().NotBeNull("the container should recover gracefully and continue resolving valid types after detecting a circular dependency");
+
+                // Assert
+                instance.Should().NotBeNull(because: "the container should recover gracefully and continue resolving valid types after detecting a circular dependency");
             }
 
             #endregion
