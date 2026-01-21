@@ -2,6 +2,8 @@ using System;
 using FluentAssertions;
 using Xunit;
 
+// ReSharper disable ClassNeverInstantiated.Global
+
 namespace MagicDI.Tests
 {
     public partial class MagicDITests
@@ -203,10 +205,10 @@ namespace MagicDI.Tests
                 }
 
                 // Test helper class: IDisposable with all singleton dependencies
-                public class DisposableWithSingletonDeps : IDisposable
+                public class DisposableWithSingletonDeps(LeafClass dep) : IDisposable
                 {
-                    public LeafClass Dep { get; }
-                    public DisposableWithSingletonDeps(LeafClass dep) => Dep = dep;
+                    public LeafClass Dep { get; } = dep;
+
                     public void Dispose() { }
                 }
 
@@ -370,25 +372,15 @@ namespace MagicDI.Tests
             public class ExplicitTransientClass { }
 
             [Lifetime(Lifetime.Singleton)]
-            public class SingletonWithTransientDep
+            public class SingletonWithTransientDep(DisposableClass disposable)
             {
-                public DisposableClass Disposable { get; }
-
-                public SingletonWithTransientDep(DisposableClass disposable)
-                {
-                    Disposable = disposable;
-                }
+                public DisposableClass Disposable { get; } = disposable;
             }
 
             // Chain for testing cascade: Level3 -> Level2 -> DisposableClass
-            public class TransientChainLevel2
+            public class TransientChainLevel2(DisposableClass disposable)
             {
-                public DisposableClass Disposable { get; }
-
-                public TransientChainLevel2(DisposableClass disposable)
-                {
-                    Disposable = disposable;
-                }
+                public DisposableClass Disposable { get; } = disposable;
             }
 
             public class TransientChainLevel3
@@ -401,16 +393,10 @@ namespace MagicDI.Tests
                 }
             }
 
-            public class MixedDependenciesClass
+            public class MixedDependenciesClass(LeafClass singletonDep, DisposableClass transientDep)
             {
-                public LeafClass SingletonDep { get; }
-                public DisposableClass TransientDep { get; }
-
-                public MixedDependenciesClass(LeafClass singletonDep, DisposableClass transientDep)
-                {
-                    SingletonDep = singletonDep;
-                    TransientDep = transientDep;
-                }
+                public LeafClass SingletonDep { get; } = singletonDep;
+                public DisposableClass TransientDep { get; } = transientDep;
             }
 
             #endregion
