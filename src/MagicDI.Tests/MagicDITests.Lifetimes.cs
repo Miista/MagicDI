@@ -21,7 +21,7 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<LeafClass>();
 
                     // Assert
-                    Assert.Same(instance1, instance2);
+                    instance1.Should().BeSameAs(instance2, because: "leaf classes with no dependencies default to singleton");
                 }
             }
 
@@ -38,7 +38,7 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<ClassWithSingletonDeps>();
 
                     // Assert
-                    Assert.Same(instance1, instance2);
+                    instance1.Should().BeSameAs(instance2, because: "a class with all singleton dependencies should also be singleton");
                 }
             }
 
@@ -55,9 +55,9 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<ClassDependingOnDisposable>();
 
                     // Assert
-                    Assert.NotSame(instance1, instance2);
+                    instance1.Should().NotBeSameAs(instance2, because: "transient lifetime cascades up to dependent classes");
                 }
-                
+
                 [Fact]
                 public void Transient_dependencies_are_new_each_time()
                 {
@@ -69,7 +69,7 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<ClassDependingOnDisposable>();
 
                     // Assert
-                    Assert.NotSame(instance1.Disposable, instance2.Disposable);
+                    instance1.Disposable.Should().NotBeSameAs(instance2.Disposable, because: "transient dependencies must be recreated for each resolution");
                 }
             }
 
@@ -86,7 +86,7 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<DisposableClass>();
 
                     // Assert
-                    Assert.NotSame(instance1, instance2);
+                    instance1.Should().NotBeSameAs(instance2, because: "IDisposable types are inferred as transient to allow proper disposal");
                 }
 
                 [Fact]
@@ -101,7 +101,7 @@ namespace MagicDI.Tests
                     di.Resolve<IsolatedDisposable>();
 
                     // Assert
-                    Assert.Equal(3, IsolatedDisposable.InstanceCount);
+                    IsolatedDisposable.InstanceCount.Should().Be(3, because: "each resolution of a transient type must invoke the constructor");
                 }
 
                 public class IsolatedDisposable : IDisposable
@@ -125,7 +125,7 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<DisposableSingletonClass>();
 
                     // Assert
-                    Assert.Same(instance1, instance2);
+                    instance1.Should().BeSameAs(instance2, because: "[Lifetime(Singleton)] attribute overrides IDisposable inference");
                 }
 
                 [Fact]
@@ -139,7 +139,7 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<ExplicitTransientClass>();
 
                     // Assert
-                    Assert.NotSame(instance1, instance2);
+                    instance1.Should().NotBeSameAs(instance2, because: "[Lifetime(Transient)] attribute forces transient behavior");
                 }
 
                 [Fact]
@@ -153,7 +153,7 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<SingletonWithTransientDep>();
 
                     // Assert
-                    Assert.Same(instance1, instance2);
+                    instance1.Should().BeSameAs(instance2, because: "[Lifetime(Singleton)] attribute overrides transient cascade from dependencies");
                 }
             }
 
@@ -170,8 +170,8 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<TransientChainLevel3>();
 
                     // Assert
-                    Assert.NotSame(instance1, instance2);
-                    Assert.NotSame(instance1.Level2, instance2.Level2);
+                    instance1.Should().NotBeSameAs(instance2, because: "transient lifetime cascades through the entire dependency chain");
+                    instance1.Level2.Should().NotBeSameAs(instance2.Level2, because: "intermediate dependencies also become transient");
                 }
 
                 [Fact]
@@ -199,7 +199,7 @@ namespace MagicDI.Tests
                     var instance2 = di.Resolve<MixedDependenciesClass>();
 
                     // Assert
-                    Assert.Same(instance1.SingletonDep, instance2.SingletonDep);
+                    instance1.SingletonDep.Should().BeSameAs(instance2.SingletonDep, because: "singleton dependencies retain their singleton behavior even in transient parents");
                 }
             }
 
