@@ -159,38 +159,51 @@ namespace MagicDI
 
         /// <summary>
         /// Determines the lifetime for a resolved instance using the following priority:
-        /// 1. Explicit [Lifetime] attribute override
+        /// 1. Explicit [Lifetime] attribute override (with captive dependency validation)
         /// 2. IDisposable types → Transient
         /// 3. Cascade from dependencies (least cacheable wins)
         /// 4. No dependencies → Singleton
         /// </summary>
         /// <param name="instance">The resolved instance to determine lifetime for.</param>
         /// <returns>The inferred or explicitly specified lifetime.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// Thrown when a type is explicitly marked as Singleton but depends on a Transient type (captive dependency).
+        /// </exception>
         private Lifetime DetermineLifeTime(object instance)
         {
             var type = instance.GetType();
+            var attr = type.GetCustomAttribute<LifetimeAttribute>();
+
+            // Find transient dependencies
+            var constructor = GetConstructor(type);
+            var transientDependency = constructor.GetParameters()
+                .Select(p => p.ParameterType)
+                .FirstOrDefault(depType =>
+                    _registeredInstances.TryGetValue(depType, out var depRegistry) &&
+                    depRegistry.Lifetime == Lifetime.Transient);
 
             // 1. Check for explicit attribute override
-            var attr = type.GetCustomAttribute<LifetimeAttribute>();
             if (attr != null)
+            {
+                // Validate: explicit Singleton with transient dependency is a captive dependency error
+                if (attr.Lifetime == Lifetime.Singleton && transientDependency != null)
+                {
+                    throw new InvalidOperationException(
+                        $"Captive dependency detected: Singleton '{type.Name}' depends on Transient '{transientDependency.Name}'. " +
+                        $"This would cause the transient instance to be captured and never released. " +
+                        $"Either remove the [Lifetime(Singleton)] attribute from '{type.Name}', or mark '{transientDependency.Name}' as Singleton.");
+                }
+
                 return attr.Lifetime;
+            }
 
             // 2. IDisposable → Transient
             if (typeof(IDisposable).IsAssignableFrom(type))
                 return Lifetime.Transient;
 
             // 3. Cascade from dependencies - use the least cacheable lifetime
-            var constructor = GetConstructor(type);
-            var dependencyTypes = constructor.GetParameters().Select(p => p.ParameterType);
-
-            foreach (var depType in dependencyTypes)
-            {
-                if (_registeredInstances.TryGetValue(depType, out var depRegistry))
-                {
-                    if (depRegistry.Lifetime == Lifetime.Transient)
-                        return Lifetime.Transient;
-                }
-            }
+            if (transientDependency != null)
+                return Lifetime.Transient;
 
             // 4. No deps or all deps Singleton → Singleton
             return Lifetime.Singleton;
