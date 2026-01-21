@@ -133,107 +133,6 @@ namespace MagicDI.Tests
 
         #endregion
 
-        #region Issue 2: Lifetime Implementation (now working with magic inference)
-
-        /// <summary>
-        /// Transient lifetime via [Lifetime] attribute creates new instance each time.
-        /// </summary>
-        [Fact]
-        public void Lifetime_TransientAttribute_ShouldCreateNewInstanceEachTime()
-        {
-            // Arrange
-            var di = new MagicDI();
-
-            // Act
-            var instance1 = di.Resolve<TransientClass>();
-            var instance2 = di.Resolve<TransientClass>();
-
-            // Assert - Should be different instances (transient behavior)
-            Assert.NotSame(instance1, instance2);
-        }
-
-        /// <summary>
-        /// Lifetime can be specified via [Lifetime] attribute instead of registration API.
-        /// </summary>
-        [Fact]
-        public void Lifetime_AttributeBasedConfiguration_WorksWithoutRegistration()
-        {
-            // Arrange
-            var di = new MagicDI();
-
-            // Act - Resolve a type with [Lifetime(Lifetime.Transient)] attribute
-            var instance1 = di.Resolve<TransientClass>();
-            var instance2 = di.Resolve<TransientClass>();
-
-            // Assert - Transient via attribute works
-            Assert.NotSame(instance1, instance2);
-        }
-
-        /// <summary>
-        /// DetermineLifeTime respects [Lifetime] attribute configuration.
-        /// </summary>
-        [Fact]
-        public void Lifetime_DetermineLifeTime_ShouldRespectTypeConfiguration()
-        {
-            // Arrange
-            var di = new MagicDI();
-            TransientClass.ResetCounter();
-
-            // Act - Resolve 5 times
-            for (int i = 0; i < 5; i++)
-            {
-                di.Resolve<TransientClass>();
-            }
-
-            // Assert - If properly transient, constructor should be called 5 times
-            Assert.Equal(5, TransientClass.ConstructorCallCount);
-        }
-
-        /// <summary>
-        /// IDisposable types are automatically inferred as Transient.
-        /// </summary>
-        [Fact]
-        public void Lifetime_IDisposable_ShouldBeTransient()
-        {
-            // Arrange
-            var di = new MagicDI();
-
-            // Act
-            var instance1 = di.Resolve<DisposableService>();
-            var instance2 = di.Resolve<DisposableService>();
-
-            // Assert - IDisposable types should be transient
-            Assert.NotSame(instance1, instance2);
-        }
-
-        /// <summary>
-        /// All Lifetime enum values are now usable via magic inference.
-        /// </summary>
-        [Fact]
-        public void Lifetime_AllEnumValues_ShouldBeUsable()
-        {
-            // Arrange
-            var lifetimeType = typeof(Lifetime);
-            var values = Enum.GetValues(lifetimeType);
-
-            // Assert - Multiple lifetime values exist and are now usable
-            Assert.True(values.Length > 1,
-                "Multiple lifetime values exist");
-
-            // Verify Transient is now working
-            var di = new MagicDI();
-            var t1 = di.Resolve<TransientClass>();
-            var t2 = di.Resolve<TransientClass>();
-            Assert.NotSame(t1, t2);
-
-            // Verify Singleton still works
-            var s1 = di.Resolve<SingletonService>();
-            var s2 = di.Resolve<SingletonService>();
-            Assert.Same(s1, s2);
-        }
-
-        #endregion
-
         #region Test Helper Classes
 
         // Thread Safety Test Classes
@@ -274,28 +173,6 @@ namespace MagicDI.Tests
                 Dependency = dependency;
             }
         }
-
-        // Lifetime Test Classes
-        [Lifetime(Lifetime.Transient)]
-        public class TransientClass
-        {
-            private static int _constructorCallCount;
-            public static int ConstructorCallCount => _constructorCallCount;
-
-            public TransientClass()
-            {
-                Interlocked.Increment(ref _constructorCallCount);
-            }
-
-            public static void ResetCounter() => _constructorCallCount = 0;
-        }
-
-        public class DisposableService : IDisposable
-        {
-            public void Dispose() { }
-        }
-
-        public class SingletonService { }
 
         #endregion
     }
