@@ -157,6 +157,94 @@ namespace MagicDI.Tests
                 }
             }
 
+            public class InferencePriority
+            {
+                [Fact]
+                public void Attribute_takes_priority_over_disposable_inference()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - DisposableWithSingletonAttr is IDisposable but has [Lifetime(Singleton)]
+                    var instance1 = di.Resolve<DisposableWithSingletonAttr>();
+                    var instance2 = di.Resolve<DisposableWithSingletonAttr>();
+
+                    // Assert
+                    instance1.Should().BeSameAs(instance2, because: "attribute (priority 1) beats IDisposable inference (priority 2)");
+                }
+
+                [Fact]
+                public void Attribute_takes_priority_over_dependency_cascade()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - SingletonWithTransientDep has transient dep but [Lifetime(Singleton)]
+                    var instance1 = di.Resolve<SingletonWithTransientDep>();
+                    var instance2 = di.Resolve<SingletonWithTransientDep>();
+
+                    // Assert
+                    instance1.Should().BeSameAs(instance2, because: "attribute (priority 1) beats dependency cascade (priority 3)");
+                }
+
+                [Fact]
+                public void Disposable_takes_priority_over_dependency_cascade()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - DisposableWithSingletonDeps implements IDisposable but has all singleton deps
+                    var instance1 = di.Resolve<DisposableWithSingletonDeps>();
+                    var instance2 = di.Resolve<DisposableWithSingletonDeps>();
+
+                    // Assert
+                    instance1.Should().NotBeSameAs(instance2, because: "IDisposable (priority 2) beats singleton cascade (priority 3)");
+                }
+
+                [Fact]
+                public void Dependency_cascade_takes_priority_over_default_singleton()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - ClassDependingOnDisposable has no attribute, not IDisposable, but has transient dep
+                    var instance1 = di.Resolve<ClassDependingOnDisposable>();
+                    var instance2 = di.Resolve<ClassDependingOnDisposable>();
+
+                    // Assert
+                    instance1.Should().NotBeSameAs(instance2, because: "dependency cascade (priority 3) beats default singleton (priority 4)");
+                }
+
+                [Fact]
+                public void Default_is_singleton_when_no_other_rules_apply()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - LeafClass has no attribute, not IDisposable, no deps
+                    var instance1 = di.Resolve<LeafClass>();
+                    var instance2 = di.Resolve<LeafClass>();
+
+                    // Assert
+                    instance1.Should().BeSameAs(instance2, because: "default (priority 4) is singleton when no other rules apply");
+                }
+
+                // Test helper class: IDisposable with all singleton dependencies
+                public class DisposableWithSingletonDeps : IDisposable
+                {
+                    public LeafClass Dep { get; }
+                    public DisposableWithSingletonDeps(LeafClass dep) => Dep = dep;
+                    public void Dispose() { }
+                }
+
+                // Test helper class: IDisposable with explicit Singleton attribute
+                [Lifetime(Lifetime.Singleton)]
+                public class DisposableWithSingletonAttr : IDisposable
+                {
+                    public void Dispose() { }
+                }
+            }
+
             public class ComplexScenarios
             {
                 [Fact]
