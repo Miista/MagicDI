@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -12,19 +13,27 @@ namespace MagicDI
     /// </summary>
     public class MagicDI
     {
-        private readonly Dictionary<Type, InstanceRegistry> _registeredInstances = new();
+        private readonly object _singletonLock = new();
+        private readonly Dictionary<Type, InstanceRegistry> _singletons = new();
 
         /// <summary>
-        /// Tracks the determined lifetime for all resolved types.
-        /// This is separate from _registeredInstances because transients are not cached there.
+        /// Tracks the determined lifetime for all types.
+        /// Computed recursively from type metadata without constructing instances.
+        /// Uses ConcurrentDictionary for thread-safe access.
         /// </summary>
-        private readonly Dictionary<Type, Lifetime> _lifetimes = new();
+        private readonly ConcurrentDictionary<Type, Lifetime> _lifetimes = new();
 
         /// <summary>
         /// Tracks types currently being resolved on each thread to detect circular dependencies.
         /// Using ThreadLocal ensures thread-safety for the resolution stack.
         /// </summary>
         private readonly ThreadLocal<HashSet<Type>> _resolutionStack = new(() => []);
+
+        /// <summary>
+        /// Tracks types currently being analyzed for lifetime determination to detect circular dependencies.
+        /// Using ThreadLocal ensures thread-safety for the lifetime analysis stack.
+        /// </summary>
+        private readonly ThreadLocal<HashSet<Type>> _lifetimeStack = new(() => []);
 
         /// <summary>
         /// Resolves an instance of the specified type, automatically
@@ -49,32 +58,36 @@ namespace MagicDI
         /// </summary>
         /// <param name="type">The type to resolve.</param>
         /// <returns>An instance of the specified type.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">Thrown when an unknown lifetime is encountered.</exception>
         private object Resolve(Type type)
         {
-            // 0. Check if we have a cached singleton instance
-            if (_registeredInstances.TryGetValue(type, out var instanceRegistry))
+            // Check if we have a cached singleton instance (fast path, no lock)
+            if (_singletons.TryGetValue(type, out var cached))
             {
-                return instanceRegistry.Value;
+                return cached.Value;
             }
 
-            var resolvedInstance = ResolveInstance(type);
+            // Determine lifetime from type metadata (recursive, no instance needed)
+            var lifetime = DetermineLifetime(type);
 
-            // 4. Determine lifetime (Scoped, Transient, Singleton)
-            var lifetime = DetermineLifeTime(resolvedInstance);
-
-            // 5. Track lifetime for all types (needed for captive dependency detection)
-            _lifetimes[type] = lifetime;
-
-            // 6. Only cache singletons - transients should create new instances each time
             if (lifetime == Lifetime.Singleton)
             {
-                var registry = new InstanceRegistry { Type = type, Lifetime = lifetime, Value = resolvedInstance };
-                _registeredInstances.Add(type, registry);
+                lock (_singletonLock)
+                {
+                    // Double-check after acquiring lock
+                    if (_singletons.TryGetValue(type, out cached))
+                    {
+                        return cached.Value;
+                    }
+
+                    var instance = ResolveInstance(type);
+                    var registry = new InstanceRegistry { Type = type, Lifetime = lifetime, Value = instance };
+                    _singletons.Add(type, registry);
+                    return instance;
+                }
             }
 
-            // 7. Return created instance
-            return resolvedInstance;
+            // Transient - no locking needed, create new instance each time
+            return ResolveInstance(type);
         }
 
         /// <summary>
@@ -160,57 +173,83 @@ namespace MagicDI
         }
 
         /// <summary>
-        /// Determines the lifetime for a resolved instance using the following priority:
+        /// Determines the lifetime for a type using the following priority:
         /// <list type="number">
         /// <item>Explicit [Lifetime] attribute override (with captive dependency validation)</item>
         /// <item>IDisposable types → Transient</item>
         /// <item>Cascade from dependencies (least cacheable wins)</item>
         /// <item>No dependencies → Singleton</item>
         /// </list>
+        /// This method works recursively on type metadata without constructing instances.
         /// </summary>
-        /// <param name="instance">The resolved instance to determine lifetime for.</param>
+        /// <param name="type">The type to determine lifetime for.</param>
         /// <returns>The inferred or explicitly specified lifetime.</returns>
         /// <exception cref="InvalidOperationException">
         /// Thrown when a type is explicitly marked as Singleton but depends on a Transient type (captive dependency).
         /// </exception>
-        private Lifetime DetermineLifeTime(object instance)
+        private Lifetime DetermineLifetime(Type type)
         {
-            var type = instance.GetType();
-            var attr = type.GetCustomAttribute<LifetimeAttribute>();
+            // Already determined?
+            if (_lifetimes.TryGetValue(type, out var cached))
+                return cached;
 
-            // Find transient dependencies
-            var constructor = GetConstructor(type);
-            var transientDependency = constructor.GetParameters()
-                .Select(p => p.ParameterType)
-                .FirstOrDefault(depType =>
-                    _lifetimes.TryGetValue(depType, out var depLifetime) &&
-                    depLifetime == Lifetime.Transient);
-
-            // 1. Check for explicit attribute override
-            if (attr != null)
+            // Check for circular dependency in lifetime analysis
+            if (!_lifetimeStack.Value.Add(type))
             {
-                // Validate: explicit Singleton with transient dependency is a captive dependency error
-                if (attr.Lifetime == Lifetime.Singleton && transientDependency != null)
-                {
-                    throw new InvalidOperationException(
-                        $"Captive dependency detected: Singleton '{type.Name}' depends on Transient '{transientDependency.Name}'. " +
-                        $"This would cause the transient instance to be captured and never released. " +
-                        $"Either remove the [Lifetime(Singleton)] attribute from '{type.Name}', or mark '{transientDependency.Name}' as Singleton.");
-                }
-
-                return attr.Lifetime;
+                var chain = string.Join(" -> ", _lifetimeStack.Value.Select(t => t.Name)) + " -> " + type.Name;
+                throw new InvalidOperationException(
+                    $"Circular dependency detected while resolving {type.Name}. Resolution chain: {chain}");
             }
 
-            // 2. IDisposable → Transient
-            if (typeof(IDisposable).IsAssignableFrom(type))
-                return Lifetime.Transient;
+            try
+            {
+                var attr = type.GetCustomAttribute<LifetimeAttribute>();
 
-            // 3. Cascade from dependencies - use the least cacheable lifetime
-            if (transientDependency != null)
-                return Lifetime.Transient;
+                // Recursively determine dependency lifetimes
+                var constructor = GetConstructor(type);
+                var transientDependency = constructor.GetParameters()
+                    .Select(p => p.ParameterType)
+                    .FirstOrDefault(depType => DetermineLifetime(depType) == Lifetime.Transient);
 
-            // 4. No deps or all deps Singleton → Singleton
-            return Lifetime.Singleton;
+                Lifetime lifetime;
+
+                // 1. Check for explicit attribute override
+                if (attr != null)
+                {
+                    // Validate: explicit Singleton with transient dependency is a captive dependency error
+                    if (attr.Lifetime == Lifetime.Singleton && transientDependency != null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Captive dependency detected: Singleton '{type.Name}' depends on Transient '{transientDependency.Name}'. " +
+                            $"This would cause the transient instance to be captured and never released. " +
+                            $"Either remove the [Lifetime(Singleton)] attribute from '{type.Name}', or mark '{transientDependency.Name}' as Singleton.");
+                    }
+
+                    lifetime = attr.Lifetime;
+                }
+                // 2. IDisposable → Transient
+                else if (typeof(IDisposable).IsAssignableFrom(type))
+                {
+                    lifetime = Lifetime.Transient;
+                }
+                // 3. Cascade from dependencies - use the least cacheable lifetime
+                else if (transientDependency != null)
+                {
+                    lifetime = Lifetime.Transient;
+                }
+                // 4. No deps or all deps Singleton → Singleton
+                else
+                {
+                    lifetime = Lifetime.Singleton;
+                }
+
+                _lifetimes[type] = lifetime;
+                return lifetime;
+            }
+            finally
+            {
+                _lifetimeStack.Value.Remove(type);
+            }
         }
     }
 }
