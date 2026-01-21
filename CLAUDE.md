@@ -30,19 +30,26 @@ dotnet run --project src/Sandbox/Sandbox.csproj
 
 ## Architecture
 
-The library consists of three core files in `src/MagicDI/`:
+The library consists of the following core files in `src/MagicDI/`:
 
-- **MagicDI.cs**: Main container class with `Resolve<T>()` entry point. Uses a `Dictionary<Type, InstanceRegistry>` for caching. Resolution works by finding the constructor with most parameters, recursively resolving all parameter types, then invoking the constructor via reflection.
+- **MagicDI.cs**: Main container class with `Resolve<T>()` entry point. Manages singleton caching with thread-safe double-check locking and coordinates between lifetime resolution and instance creation.
 
-- **InstanceRegistry.cs**: Internal data holder tracking resolved types, their lifetime, and cached instance values.
+- **LifetimeResolver.cs**: Internal class that determines type lifetimes using metadata analysis. Supports explicit `[Lifetime]` attributes, automatic `IDisposable` → Transient inference, and lifetime cascading from dependencies.
 
-- **Lifetime.cs**: Enum defining Singleton, Transient, and Scoped lifetimes. Note: Currently only Singleton is implemented (all resolved instances are cached and reused).
+- **InstanceFactory.cs**: Internal class that creates instances by resolving constructor dependencies. Uses a resolver delegate to break circular class dependencies. Includes thread-local circular dependency detection.
+
+- **ConstructorSelector.cs**: Static helper that selects the most appropriate constructor for a type.
+
+- **Lifetime.cs**: Enum defining Singleton, Transient, and Scoped lifetimes.
+
+- **LifetimeAttribute.cs**: Attribute for explicitly specifying a class's lifetime.
 
 ## Key Implementation Details
 
-- **Constructor selection**: `GetConstructor()` picks the constructor with the most parameters. Ties are broken by metadata token order.
-- **Primitive rejection**: Throws `InvalidOperationException` for primitive types (int, string, bool, etc.) in `ResolveInstance()`.
-- **No circular dependency protection**: Circular dependencies cause `StackOverflowException` (test exists but is skipped).
+- **Constructor selection**: `ConstructorSelector.GetConstructor()` picks the constructor with the most parameters. Ties are broken by metadata token order.
+- **Primitive rejection**: Throws `InvalidOperationException` for primitive types (int, string, bool, etc.) in `InstanceFactory.CreateInstance()`.
+- **Circular dependency detection**: Both `LifetimeResolver` and `InstanceFactory` use thread-local stacks to detect circular dependencies during lifetime analysis and instance resolution.
+- **Captive dependency validation**: Throws when a type marked `[Lifetime(Singleton)]` depends on a Transient type.
 - **No interface registration**: Cannot map interfaces to implementations; only concrete types are supported.
 
 ## Test Structure
