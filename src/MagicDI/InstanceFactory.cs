@@ -44,7 +44,7 @@ namespace MagicDI
             try
             {
                 // 1. Find the most appropriate constructor
-                var constructorInfo = LifetimeResolver.GetConstructor(type);
+                var constructorInfo = ConstructorSelector.GetConstructor(type);
 
                 // 2. Resolve arguments to said constructor
                 var resolvedConstructorArguments = ResolveConstructorArguments(constructorInfo);
