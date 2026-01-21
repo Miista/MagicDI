@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
+// ReSharper disable ClassNeverInstantiated.Global
+
 namespace MagicDI.Tests
 {
     public partial class MagicDITests
@@ -18,12 +20,14 @@ namespace MagicDI.Tests
                 public async Task Concurrent_resolves_return_same_instance()
                 {
                     // Arrange
+                    const int threadCount = 10;
+                    
                     var di = new MagicDI();
                     var instances = new ConcurrentBag<SlowConstructorClass>();
-                    var barrier = new Barrier(10);
+                    var barrier = new Barrier(threadCount);
 
                     // Act
-                    var tasks = Enumerable.Range(0, 10).Select(_ => Task.Run(() =>
+                    var tasks = Enumerable.Range(0, threadCount).Select(_ => Task.Run(() =>
                     {
                         barrier.SignalAndWait();
                         var instance = di.Resolve<SlowConstructorClass>();
@@ -41,12 +45,14 @@ namespace MagicDI.Tests
                 public async Task Singleton_constructor_is_called_exactly_once()
                 {
                     // Arrange
+                    const int threadCount = 20;
+                    
                     InstanceCountingClass.ResetCounter();
                     var di = new MagicDI();
-                    var barrier = new Barrier(20);
+                    var barrier = new Barrier(threadCount);
 
                     // Act
-                    var tasks = Enumerable.Range(0, 20).Select(_ => Task.Run(() =>
+                    var tasks = Enumerable.Range(0, threadCount).Select(_ => Task.Run(() =>
                     {
                         barrier.SignalAndWait();
                         di.Resolve<InstanceCountingClass>();
@@ -65,11 +71,13 @@ namespace MagicDI.Tests
                 public async Task Resolving_different_types_concurrently_does_not_throw()
                 {
                     // Arrange
+                    const int threadCount = 100;
+                    
                     var di = new MagicDI();
                     var exceptions = new ConcurrentBag<Exception>();
 
                     // Act
-                    var tasks = Enumerable.Range(0, 100).Select(i => Task.Run(() =>
+                    var tasks = Enumerable.Range(0, threadCount).Select(i => Task.Run(() =>
                     {
                         try
                         {
@@ -98,12 +106,14 @@ namespace MagicDI.Tests
                 public async Task Dependencies_remain_singleton_under_concurrent_load()
                 {
                     // Arrange
+                    const int threadCount = 10;
+                    
                     var di = new MagicDI();
                     var sharedDependencies = new ConcurrentBag<SharedDependency>();
-                    var barrier = new Barrier(10);
+                    var barrier = new Barrier(threadCount);
 
                     // Act
-                    var tasks = Enumerable.Range(0, 10).Select(_ => Task.Run(() =>
+                    var tasks = Enumerable.Range(0, threadCount).Select(_ => Task.Run(() =>
                     {
                         barrier.SignalAndWait();
                         var parent = di.Resolve<ParentWithSharedDependency>();
