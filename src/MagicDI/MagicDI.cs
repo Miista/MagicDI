@@ -15,6 +15,12 @@ namespace MagicDI
         private readonly Dictionary<Type, InstanceRegistry> _registeredInstances = new();
 
         /// <summary>
+        /// Tracks the determined lifetime for all resolved types.
+        /// This is separate from _registeredInstances because transients are not cached there.
+        /// </summary>
+        private readonly Dictionary<Type, Lifetime> _lifetimes = new();
+
+        /// <summary>
         /// Tracks types currently being resolved on each thread to detect circular dependencies.
         /// Using ThreadLocal ensures thread-safety for the resolution stack.
         /// </summary>
@@ -46,19 +52,10 @@ namespace MagicDI
         /// <exception cref="ArgumentOutOfRangeException">Thrown when an unknown lifetime is encountered.</exception>
         private object Resolve(Type type)
         {
-            // 0. Check if we have already resolved the instance
+            // 0. Check if we have a cached singleton instance
             if (_registeredInstances.TryGetValue(type, out var instanceRegistry))
             {
-                switch (instanceRegistry.Lifetime)
-                {
-                    case Lifetime.Scoped:
-                    case Lifetime.Transient:
-                        return ResolveInstance(type);
-                    case Lifetime.Singleton:
-                        return instanceRegistry.Value;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
+                return instanceRegistry.Value;
             }
 
             var resolvedInstance = ResolveInstance(type);
@@ -66,12 +63,18 @@ namespace MagicDI
             // 4. Determine lifetime (Scoped, Transient, Singleton)
             var lifetime = DetermineLifeTime(resolvedInstance);
 
-            // 5. Register created instance
-            var registry = new InstanceRegistry { Type = type, Lifetime = lifetime, Value = resolvedInstance };
-            _registeredInstances.Add(type, registry);
+            // 5. Track lifetime for all types (needed for captive dependency detection)
+            _lifetimes[type] = lifetime;
 
-            // 6. Return created instance
-            return registry.Value;
+            // 6. Only cache singletons - transients should create new instances each time
+            if (lifetime == Lifetime.Singleton)
+            {
+                var registry = new InstanceRegistry { Type = type, Lifetime = lifetime, Value = resolvedInstance };
+                _registeredInstances.Add(type, registry);
+            }
+
+            // 7. Return created instance
+            return resolvedInstance;
         }
 
         /// <summary>
@@ -180,8 +183,8 @@ namespace MagicDI
             var transientDependency = constructor.GetParameters()
                 .Select(p => p.ParameterType)
                 .FirstOrDefault(depType =>
-                    _registeredInstances.TryGetValue(depType, out var depRegistry) &&
-                    depRegistry.Lifetime == Lifetime.Transient);
+                    _lifetimes.TryGetValue(depType, out var depLifetime) &&
+                    depLifetime == Lifetime.Transient);
 
             // 1. Check for explicit attribute override
             if (attr != null)
