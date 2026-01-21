@@ -14,7 +14,7 @@ namespace MagicDI
     public class MagicDI
     {
         private readonly object _singletonLock = new();
-        private readonly Dictionary<Type, InstanceRegistry> _singletons = new();
+        private readonly Dictionary<Type, object> _singletons = new();
 
         /// <summary>
         /// Tracks the determined lifetime for all types.
@@ -63,7 +63,7 @@ namespace MagicDI
             // Check if we have a cached singleton instance (fast path, no lock)
             if (_singletons.TryGetValue(type, out var cached))
             {
-                return cached.Value;
+                return cached;
             }
 
             // Determine lifetime from type metadata (recursive, no instance needed)
@@ -76,12 +76,11 @@ namespace MagicDI
                     // Double-check after acquiring lock
                     if (_singletons.TryGetValue(type, out cached))
                     {
-                        return cached.Value;
+                        return cached;
                     }
 
                     var instance = ResolveInstance(type);
-                    var registry = new InstanceRegistry { Type = type, Lifetime = lifetime, Value = instance };
-                    _singletons.Add(type, registry);
+                    _singletons.Add(type, instance);
                     return instance;
                 }
             }
