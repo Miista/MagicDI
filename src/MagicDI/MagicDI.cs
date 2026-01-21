@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace MagicDI
 {
@@ -10,7 +10,7 @@ namespace MagicDI
     public class MagicDI
     {
         private readonly object _singletonLock = new();
-        private readonly Dictionary<Type, object> _singletons = new();
+        private readonly ConcurrentDictionary<Type, object> _singletons = new();
 
         /// <summary>
         /// Resolves lifetime for types based on metadata analysis.
@@ -75,7 +75,7 @@ namespace MagicDI
                     }
 
                     var instance = _instanceFactory.CreateInstance(type);
-                    _singletons.Add(type, instance);
+                    _singletons[type] = instance;
                     return instance;
                 }
             }
