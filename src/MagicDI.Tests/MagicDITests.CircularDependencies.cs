@@ -2,6 +2,9 @@ using System;
 using FluentAssertions;
 using Xunit;
 
+// ReSharper disable UnusedParameter.Local
+// ReSharper disable ClassNeverInstantiated.Global
+
 namespace MagicDI.Tests
 {
     public partial class MagicDITests
