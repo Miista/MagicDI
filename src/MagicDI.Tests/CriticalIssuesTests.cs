@@ -134,11 +134,10 @@ namespace MagicDI.Tests
 
         #endregion
 
-        #region Issue 2: Lifetime Implementation (Transient/Scoped not working)
+        #region Issue 2: Lifetime Implementation (now working with magic inference)
 
         /// <summary>
-        /// Reveals: Transient lifetime should create new instance each time,
-        /// but currently everything is Singleton.
+        /// Transient lifetime via [Lifetime] attribute creates new instance each time.
         /// </summary>
         [Fact]
         public void Lifetime_TransientAttribute_ShouldCreateNewInstanceEachTime()
@@ -151,31 +150,28 @@ namespace MagicDI.Tests
             var instance2 = di.Resolve<TransientClass>();
 
             // Assert - Should be different instances (transient behavior)
-            // Currently fails because everything is singleton
             Assert.NotSame(instance1, instance2);
         }
 
         /// <summary>
-        /// Reveals: No API exists to register a type as Transient.
+        /// Lifetime can be specified via [Lifetime] attribute instead of registration API.
         /// </summary>
         [Fact]
-        public void Lifetime_NoRegistrationApi_CannotSpecifyLifetime()
+        public void Lifetime_AttributeBasedConfiguration_WorksWithoutRegistration()
         {
             // Arrange
             var di = new MagicDI();
-            var diType = di.GetType();
 
-            // Act - Check if Register method exists
-            var registerMethods = diType.GetMethods()
-                .Where(m => m.Name.Contains("Register"))
-                .ToList();
+            // Act - Resolve a type with [Lifetime(Lifetime.Transient)] attribute
+            var instance1 = di.Resolve<TransientClass>();
+            var instance2 = di.Resolve<TransientClass>();
 
-            // Assert - Should have a registration API
-            Assert.NotEmpty(registerMethods);
+            // Assert - Transient via attribute works
+            Assert.NotSame(instance1, instance2);
         }
 
         /// <summary>
-        /// Reveals: DetermineLifeTime always returns Singleton regardless of type.
+        /// DetermineLifeTime respects [Lifetime] attribute configuration.
         /// </summary>
         [Fact]
         public void Lifetime_DetermineLifeTime_ShouldRespectTypeConfiguration()
@@ -195,7 +191,24 @@ namespace MagicDI.Tests
         }
 
         /// <summary>
-        /// Reveals: The Lifetime enum has values that cannot be used.
+        /// IDisposable types are automatically inferred as Transient.
+        /// </summary>
+        [Fact]
+        public void Lifetime_IDisposable_ShouldBeTransient()
+        {
+            // Arrange
+            var di = new MagicDI();
+
+            // Act
+            var instance1 = di.Resolve<DisposableService>();
+            var instance2 = di.Resolve<DisposableService>();
+
+            // Assert - IDisposable types should be transient
+            Assert.NotSame(instance1, instance2);
+        }
+
+        /// <summary>
+        /// All Lifetime enum values are now usable via magic inference.
         /// </summary>
         [Fact]
         public void Lifetime_AllEnumValues_ShouldBeUsable()
@@ -204,13 +217,20 @@ namespace MagicDI.Tests
             var lifetimeType = typeof(Lifetime);
             var values = Enum.GetValues(lifetimeType);
 
-            // Assert - Document that multiple lifetime values exist
-            // but only Singleton is actually implemented
+            // Assert - Multiple lifetime values exist and are now usable
             Assert.True(values.Length > 1,
-                "Multiple lifetime values exist but only Singleton is implemented");
+                "Multiple lifetime values exist");
 
-            // This test passes but documents the issue - Transient and Scoped
-            // values exist in the enum but are unreachable in the switch statement
+            // Verify Transient is now working
+            var di = new MagicDI();
+            var t1 = di.Resolve<TransientClass>();
+            var t2 = di.Resolve<TransientClass>();
+            Assert.NotSame(t1, t2);
+
+            // Verify Singleton still works
+            var s1 = di.Resolve<SingletonService>();
+            var s2 = di.Resolve<SingletonService>();
+            Assert.Same(s1, s2);
         }
 
         #endregion
@@ -257,6 +277,7 @@ namespace MagicDI.Tests
         }
 
         // Lifetime Test Classes
+        [Lifetime(Lifetime.Transient)]
         public class TransientClass
         {
             private static int _constructorCallCount;
@@ -269,6 +290,13 @@ namespace MagicDI.Tests
 
             public static void ResetCounter() => _constructorCallCount = 0;
         }
+
+        public class DisposableService : IDisposable
+        {
+            public void Dispose() { }
+        }
+
+        public class SingletonService { }
 
         #endregion
     }
