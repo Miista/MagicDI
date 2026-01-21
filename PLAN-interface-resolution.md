@@ -142,10 +142,10 @@ InstanceFactory only deals with concrete types. The resolver delegate it receive
 
 Each step should be committed separately before moving to the next.
 
-- [ ] **Step 1:** Create `ImplementationFinder.cs` with `GetConcreteType()` method
-- [ ] **Step 2:** Modify `MagicDI.cs` - split Resolve into public/internal methods, add `GetCallingType()`
-- [ ] **Step 3:** Modify `LifetimeResolver.cs` - add context parameter and use `ImplementationFinder`
-- [ ] **Step 4:** Add interface resolution tests to `MagicDITests.cs`
+- [x] **Step 1:** Create `ImplementationFinder.cs` with `GetConcreteType()` method
+- [x] **Step 2:** Modify `MagicDI.cs` - split Resolve into public/internal methods, add `GetCallingType()`
+- [x] **Step 3:** Modify `LifetimeResolver.cs` - add context parameter and use `ImplementationFinder`
+- [x] **Step 4:** Add interface resolution tests to `MagicDITests.cs`
 
 ## Test Cases
 
