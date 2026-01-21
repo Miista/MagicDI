@@ -59,7 +59,7 @@ namespace MagicDI
                 var attr = type.GetCustomAttribute<LifetimeAttribute>();
 
                 // Recursively determine dependency lifetimes
-                var constructor = GetConstructor(type);
+                var constructor = ConstructorSelector.GetConstructor(type);
                 var transientDependency = constructor.GetParameters()
                     .Select(p => p.ParameterType)
                     .FirstOrDefault(depType => DetermineLifetime(depType) == Lifetime.Transient);
@@ -103,27 +103,6 @@ namespace MagicDI
             {
                 _lifetimeStack.Value.Remove(type);
             }
-        }
-
-        /// <summary>
-        /// Gets the most appropriate constructor for the specified type.
-        /// Selects the constructor with the most parameters, using metadata token order as a tiebreaker.
-        /// </summary>
-        /// <param name="type">The type to get the constructor for.</param>
-        /// <returns>The selected constructor.</returns>
-        /// <exception cref="InvalidOperationException">Thrown when the type has no public constructors.</exception>
-        internal static ConstructorInfo GetConstructor(Type type)
-        {
-            var appropriateConstructor = type.GetConstructors()
-                .OrderByDescending(info => info.GetParameters().Length)
-                .ThenBy(info => info.MetadataToken)
-                .FirstOrDefault();
-
-            if (appropriateConstructor == null)
-                throw new InvalidOperationException(
-                    $"Cannot resolve instance of type {type.Name} because it has no public constructors");
-
-            return appropriateConstructor;
         }
     }
 }
