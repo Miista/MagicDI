@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace MagicDI
 {
@@ -12,6 +13,12 @@ namespace MagicDI
     public class MagicDI
     {
         private readonly Dictionary<Type, InstanceRegistry> _registeredInstances = new Dictionary<Type, InstanceRegistry>();
+
+        /// <summary>
+        /// Tracks types currently being resolved on each thread to detect circular dependencies.
+        /// Using ThreadLocal ensures thread-safety for the resolution stack.
+        /// </summary>
+        private readonly ThreadLocal<HashSet<Type>> _resolutionStack = new ThreadLocal<HashSet<Type>>(() => new HashSet<Type>());
 
         /// <summary>
         /// Resolves an instance of the specified type, automatically
@@ -74,7 +81,8 @@ namespace MagicDI
         /// <param name="type">The type to instantiate.</param>
         /// <returns>A new instance of the specified type.</returns>
         /// <exception cref="InvalidOperationException">
-        /// Thrown when the type is a primitive type or when constructor invocation returns null.
+        /// Thrown when the type is a primitive type, when a circular dependency is detected,
+        /// or when constructor invocation returns null.
         /// </exception>
         private object ResolveInstance(Type type)
         {
@@ -82,20 +90,36 @@ namespace MagicDI
                 throw new InvalidOperationException(
                     $"Cannot resolve instance of type {type.Name} because it is a primitive type");
 
-            // 1. Find the most appropriate constructor
-            ConstructorInfo constructorInfo = GetConstructor(type);
-
-            // 2. Resolve arguments to said constructor
-            object[] resolvedConstructorArguments = ResolveConstructorArguments(constructorInfo);
-
-            // 3. Invoke constructor
-            var instance = constructorInfo.Invoke(resolvedConstructorArguments);
-
-            if (instance == null)
+            // Check for circular dependency
+            if (!_resolutionStack.Value.Add(type))
+            {
+                var chain = string.Join(" -> ", _resolutionStack.Value.Select(t => t.Name)) + " -> " + type.Name;
                 throw new InvalidOperationException(
-                    $"Constructor invocation for type {type.Name} returned null");
+                    $"Circular dependency detected while resolving {type.Name}. Resolution chain: {chain}");
+            }
 
-            return instance;
+            try
+            {
+                // 1. Find the most appropriate constructor
+                ConstructorInfo constructorInfo = GetConstructor(type);
+
+                // 2. Resolve arguments to said constructor
+                object[] resolvedConstructorArguments = ResolveConstructorArguments(constructorInfo);
+
+                // 3. Invoke constructor
+                var instance = constructorInfo.Invoke(resolvedConstructorArguments);
+
+                if (instance == null)
+                    throw new InvalidOperationException(
+                        $"Constructor invocation for type {type.Name} returned null");
+
+                return instance;
+            }
+            finally
+            {
+                // Always remove the type from the resolution stack when done
+                _resolutionStack.Value.Remove(type);
+            }
         }
 
         /// <summary>

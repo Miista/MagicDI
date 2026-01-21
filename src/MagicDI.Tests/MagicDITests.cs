@@ -171,18 +171,15 @@ namespace MagicDI.Tests
             // Both should have used the same constructor (verified by consistent behavior)
         }
 
-        [Fact(Skip = "Circular dependency causes StackOverflowException which cannot be caught. Requires circular dependency detection to be implemented.")]
-        public void Resolve_CircularDependency_CurrentlyUnsupported()
+        [Fact]
+        public void Resolve_CircularDependency_ThrowsInvalidOperationException()
         {
             // Arrange
             var di = new MagicDI();
 
             // Act & Assert
-            // Note: This currently causes StackOverflowException which terminates the process
-            // This test is skipped because StackOverflowException cannot be caught in .NET
-            // In a production system, circular dependency detection should be added to prevent this
-            // Expected behavior after fix: throw InvalidOperationException with message about circular dependency
-            di.Resolve<CircularA>();
+            var exception = Assert.Throws<InvalidOperationException>(() => di.Resolve<CircularA>());
+            Assert.Contains("circular", exception.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]
