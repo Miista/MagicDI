@@ -1,4 +1,6 @@
 using System;
+using System.Reflection;
+using FluentAssertions;
 using Xunit;
 
 namespace MagicDI.Tests
@@ -14,7 +16,7 @@ namespace MagicDI.Tests
 
                 var instance = di.Resolve<SimpleClass>();
 
-                Assert.NotNull(instance);
+                instance.Should().NotBeNull("the container should create instances of simple types without dependencies");
             }
 
             [Fact]
@@ -24,8 +26,8 @@ namespace MagicDI.Tests
 
                 var instance = di.Resolve<ClassWithDependency>();
 
-                Assert.NotNull(instance);
-                Assert.NotNull(instance.Dependency);
+                instance.Should().NotBeNull("the container should create the requested type");
+                instance.Dependency.Should().NotBeNull("the container should automatically resolve and inject constructor dependencies");
             }
 
             [Fact]
@@ -36,7 +38,7 @@ namespace MagicDI.Tests
                 var instance1 = di.Resolve<SimpleClass>();
                 var instance2 = di.Resolve<SimpleClass>();
 
-                Assert.Same(instance1, instance2);
+                instance1.Should().BeSameAs(instance2, "singleton lifetime means the same instance is returned for all resolutions");
             }
 
             [Fact]
@@ -46,9 +48,9 @@ namespace MagicDI.Tests
 
                 var instance = di.Resolve<ClassWithNestedDependency>();
 
-                Assert.NotNull(instance);
-                Assert.NotNull(instance.Dependency);
-                Assert.NotNull(instance.Dependency.Dependency);
+                instance.Should().NotBeNull("the container should create the top-level type");
+                instance.Dependency.Should().NotBeNull("the container should resolve first-level dependencies");
+                instance.Dependency.Dependency.Should().NotBeNull("the container should recursively resolve nested dependencies");
             }
 
             [Fact]
@@ -58,9 +60,9 @@ namespace MagicDI.Tests
 
                 var instance = di.Resolve<ClassWithMultipleDependencies>();
 
-                Assert.NotNull(instance);
-                Assert.NotNull(instance.Dependency1);
-                Assert.NotNull(instance.Dependency2);
+                instance.Should().NotBeNull("the container should create types with multiple constructor parameters");
+                instance.Dependency1.Should().NotBeNull("the container should resolve the first constructor parameter");
+                instance.Dependency2.Should().NotBeNull("the container should resolve the second constructor parameter");
             }
 
             [Fact]
@@ -71,7 +73,8 @@ namespace MagicDI.Tests
                 var instance1 = di.Resolve<ClassWithDependency>();
                 var instance2 = di.Resolve<ClassWithNestedDependency>();
 
-                Assert.Same(instance1.Dependency, instance2.Dependency.Dependency);
+                instance1.Dependency.Should().BeSameAs(instance2.Dependency.Dependency,
+                    "singleton instances should be shared across different dependency graphs");
             }
 
             [Fact]
@@ -79,7 +82,9 @@ namespace MagicDI.Tests
             {
                 var di = new MagicDI();
 
-                Assert.Throws<InvalidOperationException>(() => di.Resolve<int>());
+                var act = () => di.Resolve<int>();
+
+                act.Should().Throw<InvalidOperationException>("primitive types cannot be instantiated by the container");
             }
 
             [Fact]
@@ -89,10 +94,10 @@ namespace MagicDI.Tests
 
                 var instance = di.Resolve<ClassWithMultipleConstructors>();
 
-                Assert.NotNull(instance);
-                Assert.NotNull(instance.Dependency1);
-                Assert.NotNull(instance.Dependency2);
-                Assert.True(instance.UsedLargerConstructor);
+                instance.Should().NotBeNull("the container should create the instance");
+                instance.Dependency1.Should().NotBeNull("the first dependency should be resolved");
+                instance.Dependency2.Should().NotBeNull("the second dependency should be resolved when using the larger constructor");
+                instance.UsedLargerConstructor.Should().BeTrue("the container should prefer constructors with more parameters to maximize dependency injection");
             }
 
             [Fact]
@@ -100,8 +105,10 @@ namespace MagicDI.Tests
             {
                 var di = new MagicDI();
 
-                var exception = Assert.Throws<InvalidOperationException>(() => di.Resolve<ClassWithNoPublicConstructor>());
-                Assert.Contains("no public constructors", exception.Message);
+                var act = () => di.Resolve<ClassWithNoPublicConstructor>();
+
+                act.Should().Throw<InvalidOperationException>("types without public constructors cannot be instantiated")
+                    .WithMessage("*no public constructors*", "the error message should explain why resolution failed");
             }
 
             [Fact]
@@ -109,7 +116,9 @@ namespace MagicDI.Tests
             {
                 var di = new MagicDI();
 
-                Assert.Throws<System.Reflection.TargetInvocationException>(() => di.Resolve<ClassWithThrowingConstructor>());
+                var act = () => di.Resolve<ClassWithThrowingConstructor>();
+
+                act.Should().Throw<TargetInvocationException>("exceptions thrown during construction should propagate to the caller");
             }
 
             [Fact]
@@ -119,11 +128,11 @@ namespace MagicDI.Tests
 
                 var instance = di.Resolve<DeepLevel5>();
 
-                Assert.NotNull(instance);
-                Assert.NotNull(instance.Level4);
-                Assert.NotNull(instance.Level4.Level3);
-                Assert.NotNull(instance.Level4.Level3.Level2);
-                Assert.NotNull(instance.Level4.Level3.Level2.Level1);
+                instance.Should().NotBeNull("the container should handle deep dependency chains");
+                instance.Level4.Should().NotBeNull("level 4 dependency should be resolved");
+                instance.Level4.Level3.Should().NotBeNull("level 3 dependency should be resolved");
+                instance.Level4.Level3.Level2.Should().NotBeNull("level 2 dependency should be resolved");
+                instance.Level4.Level3.Level2.Level1.Should().NotBeNull("level 1 dependency should be resolved at the bottom of the chain");
             }
 
             [Fact]
@@ -134,8 +143,8 @@ namespace MagicDI.Tests
                 var instance1 = di.Resolve<ClassWithSameParameterCountConstructors>();
                 var instance2 = di.Resolve<ClassWithSameParameterCountConstructors>();
 
-                Assert.NotNull(instance1);
-                Assert.NotNull(instance2);
+                instance1.Should().NotBeNull("first resolution should succeed");
+                instance2.Should().NotBeNull("second resolution should succeed with consistent constructor selection");
             }
 
             [Fact]
@@ -145,8 +154,8 @@ namespace MagicDI.Tests
 
                 var instance = di.Resolve<SimpleClass>();
 
-                Assert.NotNull(instance);
-                Assert.IsType<SimpleClass>(instance);
+                instance.Should().NotBeNull("resolution should succeed");
+                instance.Should().BeOfType<SimpleClass>("the generic Resolve<T> method should return the exact requested type");
             }
 
             #region Test Classes

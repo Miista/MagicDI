@@ -1,4 +1,5 @@
 using System;
+using FluentAssertions;
 using Xunit;
 
 namespace MagicDI.Tests
@@ -13,8 +14,10 @@ namespace MagicDI.Tests
             {
                 var di = new MagicDI();
 
-                var exception = Assert.Throws<InvalidOperationException>(() => di.Resolve<CircularA>());
-                Assert.Contains("circular", exception.Message, StringComparison.OrdinalIgnoreCase);
+                var act = () => di.Resolve<CircularA>();
+
+                act.Should().Throw<InvalidOperationException>("direct circular dependencies must be detected to prevent stack overflow")
+                    .WithMessage("*circular*", "the error message should clearly indicate a circular dependency was found");
             }
 
             #region Issue 3: Circular Dependency Detection
@@ -24,11 +27,10 @@ namespace MagicDI.Tests
             {
                 var di = new MagicDI();
 
-                var exception = Assert.Throws<InvalidOperationException>(() =>
-                    di.Resolve<CircularClassA>()
-                );
+                var act = () => di.Resolve<CircularClassA>();
 
-                Assert.Contains("circular", exception.Message, StringComparison.OrdinalIgnoreCase);
+                act.Should().Throw<InvalidOperationException>("A->B->A cycles must be detected before causing infinite recursion")
+                    .WithMessage("*circular*", "the exception message should mention 'circular' to help developers diagnose the issue");
             }
 
             [Fact]
@@ -36,11 +38,10 @@ namespace MagicDI.Tests
             {
                 var di = new MagicDI();
 
-                var exception = Assert.Throws<InvalidOperationException>(() =>
-                    di.Resolve<IndirectCircularA>()
-                );
+                var act = () => di.Resolve<IndirectCircularA>();
 
-                Assert.Contains("circular", exception.Message, StringComparison.OrdinalIgnoreCase);
+                act.Should().Throw<InvalidOperationException>("indirect cycles like A->B->C->A must be detected regardless of chain length")
+                    .WithMessage("*circular*", "even multi-hop cycles should produce a clear circular dependency message");
             }
 
             [Fact]
@@ -48,11 +49,10 @@ namespace MagicDI.Tests
             {
                 var di = new MagicDI();
 
-                var exception = Assert.Throws<InvalidOperationException>(() =>
-                    di.Resolve<SelfReferencingClass>()
-                );
+                var act = () => di.Resolve<SelfReferencingClass>();
 
-                Assert.Contains("circular", exception.Message, StringComparison.OrdinalIgnoreCase);
+                act.Should().Throw<InvalidOperationException>("a type depending on itself is the simplest form of circular dependency")
+                    .WithMessage("*circular*", "self-references should be reported as circular dependencies");
             }
 
             [Fact]
@@ -60,11 +60,10 @@ namespace MagicDI.Tests
             {
                 var di = new MagicDI();
 
-                var exception = Assert.Throws<InvalidOperationException>(() =>
-                    di.Resolve<IndirectCircularA>()
-                );
+                var act = () => di.Resolve<IndirectCircularA>();
 
-                Assert.Contains("IndirectCircularA", exception.Message);
+                act.Should().Throw<InvalidOperationException>()
+                    .WithMessage("*IndirectCircularA*", "the exception message should include the type names involved to help developers locate the cycle");
             }
 
             [Fact]
@@ -72,10 +71,11 @@ namespace MagicDI.Tests
             {
                 var di = new MagicDI();
 
-                Assert.Throws<InvalidOperationException>(() => di.Resolve<CircularClassA>());
+                var failedResolution = () => di.Resolve<CircularClassA>();
+                failedResolution.Should().Throw<InvalidOperationException>("circular dependency should be detected");
 
                 var instance = di.Resolve<NonCircularClass>();
-                Assert.NotNull(instance);
+                instance.Should().NotBeNull("the container should recover gracefully and continue resolving valid types after detecting a circular dependency");
             }
 
             #endregion
