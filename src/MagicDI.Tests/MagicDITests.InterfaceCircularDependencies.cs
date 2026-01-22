@@ -8,6 +8,188 @@ namespace MagicDI.Tests
     {
         public class InterfaceCircularDependency
         {
+            public class CoreDetection
+            {
+                [Fact]
+                public void Throws_when_direct_interface_circular_dependency_detected()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<IServiceA>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>(
+                            because: "interface-based circular dependencies must be detected")
+                        .WithMessage("*circular*",
+                            because: "the error message should indicate a circular dependency");
+                }
+
+                [Fact]
+                public void Error_message_contains_concrete_type_names_not_interfaces()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<IServiceA>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*ServiceA*",
+                            because: "the error should mention the concrete implementation name")
+                        .WithMessage("*ServiceB*",
+                            because: "all concrete types in the circular chain should be mentioned");
+                }
+
+                [Fact]
+                public void Throws_when_mixed_interface_concrete_circular_dependency()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<MixedConcreteClass>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>(
+                            because: "circular dependencies between concrete classes and interface implementations must be detected")
+                        .WithMessage("*circular*");
+                }
+
+                [Fact]
+                public void Throws_when_mixed_circular_resolved_via_interface()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<IMixedService>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>(
+                            because: "the same circular dependency should be detected regardless of entry point")
+                        .WithMessage("*MixedServiceImpl*");
+                }
+
+                [Fact]
+                public void Throws_when_self_referencing_through_interface()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<ISelfReferencing>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>(
+                            because: "self-referencing through an interface is still a circular dependency")
+                        .WithMessage("*SelfReferencingImpl*");
+                }
+            }
+
+            public class MultiHopAndConcreteEntry
+            {
+                [Fact]
+                public void Throws_when_three_way_interface_circular_dependency()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<IAlpha>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>(
+                            because: "multi-hop interface circular dependencies must be detected")
+                        .WithMessage("*circular*");
+                }
+
+                [Fact]
+                public void Three_way_circular_error_includes_full_chain()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<IAlpha>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*AlphaImpl*",
+                            because: "the first type in the chain should be mentioned")
+                        .And.Message.Should().ContainAny("BetaImpl", "GammaImpl",
+                            "because the chain should include intermediate types");
+                }
+
+                [Fact]
+                public void Throws_when_concrete_depends_on_circular_interface_chain()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<ConcreteEntry>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>(
+                            because: "circular dependencies in interface chains should be detected even when entry point is concrete")
+                        .WithMessage("*circular*");
+                }
+            }
+
+            public class RecoveryAndControl
+            {
+                [Fact]
+                public void Remains_usable_after_interface_circular_detection()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - trigger circular dependency
+                    Action failedResolution = () => di.Resolve<IServiceA>();
+                    failedResolution.Should().Throw<InvalidOperationException>();
+
+                    // Act - resolve a valid type
+                    var instance = di.Resolve<NonCircularConsumer>();
+
+                    // Assert
+                    instance.Should().NotBeNull();
+                    instance.Service.Should().NotBeNull();
+                }
+
+                [Fact]
+                public void Resolves_non_circular_interface_dependencies_successfully()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    var instance = di.Resolve<NonCircularConsumer>();
+
+                    // Assert
+                    instance.Should().NotBeNull();
+                    instance.Service.Should().BeOfType<NonCircularServiceImpl>();
+                }
+
+                [Fact]
+                public void Detects_same_circular_dependency_from_either_interface()
+                {
+                    // Arrange
+                    var di1 = new MagicDI();
+                    var di2 = new MagicDI();
+
+                    // Act
+                    Action resolveA = () => di1.Resolve<IServiceA>();
+                    Action resolveB = () => di2.Resolve<IServiceB>();
+
+                    // Assert
+                    resolveA.Should().Throw<InvalidOperationException>();
+                    resolveB.Should().Throw<InvalidOperationException>();
+                }
+            }
+
             #region Test Interfaces and Classes
 
             // Scenario 1: Direct Interface Circular
@@ -100,195 +282,10 @@ namespace MagicDI.Tests
             {
                 public void Work() { }
             }
-            
+
             public class NonCircularConsumer(INonCircularService service)
             {
                 public INonCircularService Service { get; } = service;
-            }
-
-            #endregion
-
-            #region Tests 1-5: Core Detection Tests
-
-            [Fact]
-            public void Throws_when_direct_interface_circular_dependency_detected()
-            {
-                // Arrange
-                var di = new MagicDI();
-
-                // Act
-                Action act = () => di.Resolve<IServiceA>();
-
-                // Assert
-                act.Should().Throw<InvalidOperationException>(
-                        because: "interface-based circular dependencies must be detected")
-                    .WithMessage("*circular*",
-                        because: "the error message should indicate a circular dependency");
-            }
-
-            [Fact]
-            public void Error_message_contains_concrete_type_names_not_interfaces()
-            {
-                // Arrange
-                var di = new MagicDI();
-
-                // Act
-                Action act = () => di.Resolve<IServiceA>();
-
-                // Assert
-                act.Should().Throw<InvalidOperationException>()
-                    .WithMessage("*ServiceA*",
-                        because: "the error should mention the concrete implementation name")
-                    .WithMessage("*ServiceB*",
-                        because: "all concrete types in the circular chain should be mentioned");
-            }
-
-            [Fact]
-            public void Throws_when_mixed_interface_concrete_circular_dependency()
-            {
-                // Arrange
-                var di = new MagicDI();
-
-                // Act
-                Action act = () => di.Resolve<MixedConcreteClass>();
-
-                // Assert
-                act.Should().Throw<InvalidOperationException>(
-                        because: "circular dependencies between concrete classes and interface implementations must be detected")
-                    .WithMessage("*circular*");
-            }
-
-            [Fact]
-            public void Throws_when_mixed_circular_resolved_via_interface()
-            {
-                // Arrange
-                var di = new MagicDI();
-
-                // Act
-                Action act = () => di.Resolve<IMixedService>();
-
-                // Assert
-                act.Should().Throw<InvalidOperationException>(
-                        because: "the same circular dependency should be detected regardless of entry point")
-                    .WithMessage("*MixedServiceImpl*");
-            }
-
-            [Fact]
-            public void Throws_when_self_referencing_through_interface()
-            {
-                // Arrange
-                var di = new MagicDI();
-
-                // Act
-                Action act = () => di.Resolve<ISelfReferencing>();
-
-                // Assert
-                act.Should().Throw<InvalidOperationException>(
-                        because: "self-referencing through an interface is still a circular dependency")
-                    .WithMessage("*SelfReferencingImpl*");
-            }
-
-            #endregion
-
-            #region Tests 6-8: Multi-Hop and Concrete Entry Tests
-
-            [Fact]
-            public void Throws_when_three_way_interface_circular_dependency()
-            {
-                // Arrange
-                var di = new MagicDI();
-
-                // Act
-                Action act = () => di.Resolve<IAlpha>();
-
-                // Assert
-                act.Should().Throw<InvalidOperationException>(
-                        because: "multi-hop interface circular dependencies must be detected")
-                    .WithMessage("*circular*");
-            }
-
-            [Fact]
-            public void Three_way_circular_error_includes_full_chain()
-            {
-                // Arrange
-                var di = new MagicDI();
-
-                // Act
-                Action act = () => di.Resolve<IAlpha>();
-
-                // Assert
-                act.Should().Throw<InvalidOperationException>()
-                    .WithMessage("*AlphaImpl*",
-                        because: "the first type in the chain should be mentioned")
-                    .And.Message.Should().ContainAny("BetaImpl", "GammaImpl",
-                        "because the chain should include intermediate types");
-            }
-
-            [Fact]
-            public void Throws_when_concrete_depends_on_circular_interface_chain()
-            {
-                // Arrange
-                var di = new MagicDI();
-
-                // Act
-                Action act = () => di.Resolve<ConcreteEntry>();
-
-                // Assert
-                act.Should().Throw<InvalidOperationException>(
-                        because: "circular dependencies in interface chains should be detected even when entry point is concrete")
-                    .WithMessage("*circular*");
-            }
-
-            #endregion
-
-            #region Tests 9-11: Recovery and Control Tests
-
-            [Fact]
-            public void Remains_usable_after_interface_circular_detection()
-            {
-                // Arrange
-                var di = new MagicDI();
-
-                // Act - trigger circular dependency
-                Action failedResolution = () => di.Resolve<IServiceA>();
-                failedResolution.Should().Throw<InvalidOperationException>();
-
-                // Act - resolve a valid type
-                var instance = di.Resolve<NonCircularConsumer>();
-
-                // Assert
-                instance.Should().NotBeNull();
-                instance.Service.Should().NotBeNull();
-            }
-
-            [Fact]
-            public void Resolves_non_circular_interface_dependencies_successfully()
-            {
-                // Arrange
-                var di = new MagicDI();
-
-                // Act
-                var instance = di.Resolve<NonCircularConsumer>();
-
-                // Assert
-                instance.Should().NotBeNull();
-                instance.Service.Should().BeOfType<NonCircularServiceImpl>();
-            }
-
-            [Fact]
-            public void Detects_same_circular_dependency_from_either_interface()
-            {
-                // Arrange
-                var di1 = new MagicDI();
-                var di2 = new MagicDI();
-
-                // Act
-                Action resolveA = () => di1.Resolve<IServiceA>();
-                Action resolveB = () => di2.Resolve<IServiceB>();
-
-                // Assert
-                resolveA.Should().Throw<InvalidOperationException>();
-                resolveB.Should().Throw<InvalidOperationException>();
             }
 
             #endregion
