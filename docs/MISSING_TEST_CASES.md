@@ -4,13 +4,13 @@ This document identifies gaps in test coverage for the MagicDI library.
 
 ## High Priority (Core Functionality Gaps)
 
-### 1. Scoped Lifetime - Not Implemented/Tested
+### 1. Scoped Lifetime - Remove Unused Enum
 
 The `Lifetime.Scoped` enum value exists in `Lifetime.cs` but is never used or tested anywhere in the codebase.
 
-**Action Required:** Either implement scoped lifetime functionality with tests, or remove the unused enum value.
+**Action:** Remove the unused `Scoped` enum value from `Lifetime.cs`.
 
-**Location:** `MagicDITests.Lifetimes.cs` or remove from `Lifetime.cs`
+**Location:** `src/MagicDI/Lifetime.cs`
 
 ---
 
