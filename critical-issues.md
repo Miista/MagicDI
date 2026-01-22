@@ -73,32 +73,6 @@ Instead of manual registration, interface resolution was implemented using **aut
 
 See `PLAN-interface-resolution.md` for full implementation details.
 
-**Future consideration:** Explicit registration could still be added for cases where:
-- Multiple implementations exist and one should be preferred
-- Performance optimization is needed (skip assembly scanning)
-
----
-
-### 5. Primitive/Value Support
-
-**Option A: Factory registration**
-```csharp
-public void Register<T>(Func<T> factory)
-{
-    // Store and invoke factory when T is requested
-}
-
-// Usage:
-di.Register(() => "connection-string");
-di.Register(() => 5000); // port number
-```
-
-**Option B: Named registrations**
-```csharp
-public void Register<T>(string name, T value);
-public T Resolve<T>(string name);
-```
-
 ---
 
 ## Implementation Status
@@ -115,6 +89,28 @@ public T Resolve<T>(string name);
 | Step | Task | Complexity |
 |------|------|------------|
 | 1 | Remove Scoped or implement it | Low-Medium |
-| 2 | Add factory registration for primitives/values | Medium |
-| 3 | Add explicit `Register<TInterface, TImpl>()` (optional) | Medium |
-| 4 | Implement Scoped lifetime | High |
+
+---
+
+## Design Decisions (Out of Scope)
+
+The following features are **intentionally not implemented** to preserve MagicDI's zero-configuration philosophy:
+
+### No explicit `Register<TInterface, TImpl>()`
+
+MagicDI uses auto-discovery - implementations are found automatically via assembly scanning with a "closest first" strategy. Adding explicit registration would:
+- Defeat the "magic" zero-configuration design
+- Duplicate functionality available in full-featured containers (Autofac, Microsoft.Extensions.DependencyInjection)
+- Add API surface and complexity for marginal benefit
+
+**If you need explicit registration, use a traditional DI container.**
+
+### No factory registration for primitives/values
+
+Primitives (int, string, bool, etc.) are intentionally rejected. This is by design because:
+- DI containers manage **object graphs**, not configuration values
+- Configuration belongs in dedicated systems (IConfiguration, environment variables, appsettings.json)
+- Mixing DI and configuration blurs responsibilities and couples classes to the container
+- Classes needing configuration should depend on `IConfiguration` or strongly-typed options
+
+**If you need primitive injection, use the Options pattern or a configuration system.**
