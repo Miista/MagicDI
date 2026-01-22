@@ -247,6 +247,58 @@ namespace MagicDI.Tests
             }
 
             #endregion
+
+            #region Tests 9-11: Recovery and Control Tests
+
+            [Fact]
+            public void Remains_usable_after_interface_circular_detection()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act - trigger circular dependency
+                Action failedResolution = () => di.Resolve<IServiceA>();
+                failedResolution.Should().Throw<InvalidOperationException>();
+
+                // Act - resolve a valid type
+                var instance = di.Resolve<NonCircularConsumer>();
+
+                // Assert
+                instance.Should().NotBeNull();
+                instance.Service.Should().NotBeNull();
+            }
+
+            [Fact]
+            public void Resolves_non_circular_interface_dependencies_successfully()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                var instance = di.Resolve<NonCircularConsumer>();
+
+                // Assert
+                instance.Should().NotBeNull();
+                instance.Service.Should().BeOfType<NonCircularServiceImpl>();
+            }
+
+            [Fact]
+            public void Detects_same_circular_dependency_from_either_interface()
+            {
+                // Arrange
+                var di1 = new MagicDI();
+                var di2 = new MagicDI();
+
+                // Act
+                Action resolveA = () => di1.Resolve<IServiceA>();
+                Action resolveB = () => di2.Resolve<IServiceB>();
+
+                // Assert
+                resolveA.Should().Throw<InvalidOperationException>();
+                resolveB.Should().Throw<InvalidOperationException>();
+            }
+
+            #endregion
         }
     }
 }
