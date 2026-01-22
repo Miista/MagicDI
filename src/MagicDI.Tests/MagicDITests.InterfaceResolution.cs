@@ -242,6 +242,75 @@ namespace MagicDI.Tests
                 }
             }
 
+            // === Abstract class test helpers ===
+
+            // Abstract class with no implementations (for error testing)
+            public abstract class AbstractServiceWithNoImplementation
+            {
+                public abstract void DoWork();
+            }
+
+            // Abstract class with multiple implementations (for ambiguity error testing)
+            public abstract class AbstractServiceWithMultipleImpls
+            {
+                public abstract void DoWork();
+            }
+
+            public class ConcreteServiceImplA : AbstractServiceWithMultipleImpls
+            {
+                public override void DoWork() { }
+            }
+
+            public class ConcreteServiceImplB : AbstractServiceWithMultipleImpls
+            {
+                public override void DoWork() { }
+            }
+
+            // Abstract class for dependency injection testing
+            public abstract class AbstractRepository
+            {
+                public abstract string GetData();
+            }
+
+            public class ConcreteRepository : AbstractRepository
+            {
+                public override string GetData() => "data";
+            }
+
+            // Class that depends on an abstract class
+            public class ClassWithAbstractDependency
+            {
+                public AbstractRepository Repository { get; }
+
+                public ClassWithAbstractDependency(AbstractRepository repository)
+                {
+                    Repository = repository;
+                }
+            }
+
+            // Class with nested abstract class dependency
+            public class ClassWithNestedAbstractDependency
+            {
+                public ClassWithAbstractDependency Wrapper { get; }
+
+                public ClassWithNestedAbstractDependency(ClassWithAbstractDependency wrapper)
+                {
+                    Wrapper = wrapper;
+                }
+            }
+
+            // Disposable abstract class for lifetime testing
+            public abstract class DisposableAbstractService
+            {
+                public abstract void DoWork();
+            }
+
+            public class DisposableConcreteService : DisposableAbstractService, IDisposable
+            {
+                public override void DoWork() { }
+                public void Dispose() { }
+            }
+
             #endregion
         }
     }
