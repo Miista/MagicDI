@@ -93,7 +93,24 @@ namespace MagicDI.Tests
 
                 // Assert
                 act.Should().Throw<InvalidOperationException>(because: "multiple implementations create ambiguity")
-                    .WithMessage("*Multiple implementations*", because: "the error message should explain the ambiguity");
+                    .WithMessage("*Multiple implementations*", because: "the error message should explain the ambiguity")
+                    .WithMessage("*IMultipleImplementations*", because: "the error message should include the interface type name")
+                    .WithMessage("*ambiguous*", because: "the error message should clarify this is an ambiguity issue");
+            }
+
+            [Fact]
+            public void Multiple_implementations_exception_lists_competing_types()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<IMultipleImplementations>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>()
+                    .WithMessage("*ImplementationA*", because: "the error message should list the first competing implementation")
+                    .WithMessage("*ImplementationB*", because: "the error message should list all competing implementations to help developers resolve the ambiguity");
             }
 
             [Fact]
