@@ -196,6 +196,57 @@ namespace MagicDI.Tests
             }
 
             #endregion
+
+            #region Tests 6-8: Multi-Hop and Concrete Entry Tests
+
+            [Fact]
+            public void Throws_when_three_way_interface_circular_dependency()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<IAlpha>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>(
+                        because: "multi-hop interface circular dependencies must be detected")
+                    .WithMessage("*circular*");
+            }
+
+            [Fact]
+            public void Three_way_circular_error_includes_full_chain()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<IAlpha>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>()
+                    .WithMessage("*AlphaImpl*",
+                        because: "the first type in the chain should be mentioned")
+                    .And.Message.Should().ContainAny("BetaImpl", "GammaImpl",
+                        "because the chain should include intermediate types");
+            }
+
+            [Fact]
+            public void Throws_when_concrete_depends_on_circular_interface_chain()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<ConcreteEntry>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>(
+                        because: "circular dependencies in interface chains should be detected even when entry point is concrete")
+                    .WithMessage("*circular*");
+            }
+
+            #endregion
         }
     }
 }
