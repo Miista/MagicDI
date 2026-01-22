@@ -147,6 +147,32 @@ Each step should be committed separately before moving to the next.
 - [x] **Step 3:** Modify `LifetimeResolver.cs` - add context parameter and use `ImplementationFinder`
 - [x] **Step 4:** Add interface resolution tests to `MagicDITests.cs`
 
+## Implementation Notes
+
+### StackTrace Context (GetCallingType)
+
+The current implementation uses `new StackTrace().GetFrames()` to find the calling type. This works but has trade-offs:
+
+**Current Approach:**
+- `[MethodImpl(MethodImplOptions.NoInlining)]` on `Resolve<T>()` ensures the method appears in the stack
+- Walks frames until finding a type outside the MagicDI assembly
+- Simple and correct
+
+**Performance Considerations:**
+- `StackTrace` creation allocates memory and has overhead (~microseconds per call)
+- For high-frequency resolution, this could be noticeable
+- Nested resolutions don't pay this cost (they use `_contextStack` instead)
+
+**Potential Future Optimizations:**
+1. Cache caller type by `CallerMemberName`/`CallerFilePath` attributes (compile-time)
+2. Provide `Resolve<T>(Type context)` overload for perf-sensitive paths
+3. Most applications don't need context-aware resolution - could make it opt-in
+
+**Thread Safety:**
+- `_contextStack` is `ThreadLocal<Stack<Type>>` - each thread has its own stack
+- Correctly handles concurrent resolutions on different threads
+- Correctly handles nested resolutions on the same thread
+
 ## Test Cases
 
 - Interface with single implementation → resolves correctly
@@ -158,3 +184,16 @@ Each step should be committed separately before moving to the next.
 - Context-aware resolution (same interface resolves differently based on requester's assembly)
 - Top-level interface resolution (uses calling type as context)
 - Abstract class resolution (same behavior as interface)
+
+## Thread Safety Considerations
+
+The interface resolution feature integrates with the existing thread-safe architecture:
+
+| Component | Thread Safety Mechanism |
+|-----------|------------------------|
+| `_contextStack` | `ThreadLocal<Stack<Type>>` - each thread has its own context stack |
+| Interface→Impl cache | Not cached (by design - same interface can resolve differently based on context) |
+| Implementation search | Stateless, thread-safe (reads assembly metadata only) |
+| Singleton cache | `ConcurrentDictionary` + double-check locking (existing) |
+
+**Design Decision:** Interface→Implementation mappings are NOT cached globally because the same interface may resolve to different implementations based on the requesting type's assembly. This is intentional for the "closest first" strategy.

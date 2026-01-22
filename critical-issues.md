@@ -6,136 +6,104 @@ Based on the code review, here are remediation options organized by priority.
 
 ## Critical Fixes
 
-### 1. Thread Safety
+### 1. Thread Safety ✅ IMPLEMENTED
 
-**Option A: ConcurrentDictionary (Recommended)**
-```csharp
-private readonly ConcurrentDictionary<Type, InstanceRegistry> _registeredInstances = new();
-```
-- Simple drop-in replacement
-- Need to use `GetOrAdd()` with a factory to ensure single instance creation
+Thread safety has been implemented using:
 
-**Option B: Lock-based approach**
-```csharp
-private readonly object _lock = new();
-private readonly Dictionary<Type, InstanceRegistry> _registeredInstances = new();
+- **ConcurrentDictionary** for singleton cache (`MagicDI._singletons`) and lifetime cache (`LifetimeResolver._lifetimes`)
+- **Double-check locking** in `MagicDI.Resolve()` for singleton instantiation - ensures only one instance is created even under concurrent access
+- **ThreadLocal stacks** for circular dependency detection:
+  - `LifetimeResolver._lifetimeStack` - prevents infinite recursion during lifetime analysis
+  - `InstanceFactory._resolutionStack` - prevents infinite recursion during instance creation
+  - `MagicDI._contextStack` - tracks requesting type context for interface resolution
 
-// In Resolve():
-lock (_lock)
-{
-    // resolution logic
-}
-```
-- More control but slightly more code
-- Simpler to reason about for singleton guarantees
+**Verified by tests in `MagicDITests.ThreadSafety.cs`:**
+- `Concurrent_resolves_return_same_instance` - verifies singleton guarantee under concurrent load
+- `Singleton_constructor_is_called_exactly_once` - verifies no duplicate instantiation
+- `Resolving_different_types_concurrently_does_not_throw` - verifies no race conditions
+- `Dependencies_remain_singleton_under_concurrent_load` - verifies dependency singleton guarantee
 
 ---
 
-### 2. Lifetime Implementation
+### 2. Lifetime Implementation ✅ PARTIALLY IMPLEMENTED
 
-**Option A: Remove unused lifetimes**
-- Delete `Transient` and `Scoped` from the enum
-- Rename to clarify singleton-only behavior
-- Simplest fix, honest about capabilities
+**Singleton** - ✅ Implemented (default, cached in `_singletons`)
 
-**Option B: Implement all lifetimes**
-- Add registration API: `Register<T>(Lifetime lifetime)`
-- Store lifetime preference per type
-- Transient: always create new instance
-- Scoped: requires scope context (more complex)
+**Transient** - ✅ Implemented via:
+- `[Lifetime(Transient)]` attribute
+- Automatic inference for `IDisposable` types
+- Lifetime cascading from transient dependencies
 
-**Option C: Implement Transient only**
-- Add attribute-based lifetime: `[Transient]` on classes
-- Read attribute in `DetermineLifeTime()`
-- Defer Scoped to future version
+**Scoped** - ⏸️ Deferred (requires scope context management, too complex for current scope)
 
 ---
 
-### 3. Circular Dependency Detection
+### 3. Circular Dependency Detection ✅ IMPLEMENTED
 
-**Option A: Resolution stack tracking**
-```csharp
-private readonly ThreadLocal<HashSet<Type>> _resolutionStack = new(() => new HashSet<Type>());
+Circular dependency detection is implemented using **Option A: Resolution stack tracking** in two places:
 
-private object ResolveInstance(Type type)
-{
-    if (!_resolutionStack.Value.Add(type))
-        throw new InvalidOperationException($"Circular dependency detected: {type.Name}");
+1. **`InstanceFactory._resolutionStack`** (`ThreadLocal<HashSet<Type>>`)
+   - Detects circular dependencies during instance creation
+   - Throws with full resolution chain: `"Circular dependency detected while resolving {type}. Resolution chain: A -> B -> C -> A"`
 
-    try
-    {
-        // existing resolution logic
-    }
-    finally
-    {
-        _resolutionStack.Value.Remove(type);
-    }
-}
-```
+2. **`LifetimeResolver._lifetimeStack`** (`ThreadLocal<HashSet<Type>>`)
+   - Detects circular dependencies during lifetime analysis (before instantiation)
+   - Same error message format for consistency
 
-**Option B: Pass resolution chain as parameter**
-- Pass `HashSet<Type>` through recursive calls
-- Check before each resolution
-- Slightly cleaner but changes method signatures
+Using `ThreadLocal` ensures thread-safety - each thread has its own resolution stack.
 
 ---
 
 ## High Priority Enhancements
 
-### 4. Interface Registration
+### 4. Interface Resolution ✅ IMPLEMENTED (Auto-Discovery Approach)
 
-**Option A: Simple dictionary mapping**
-```csharp
-private readonly Dictionary<Type, Type> _typeMappings = new();
+Instead of manual registration, interface resolution was implemented using **automatic discovery**:
 
-public void Register<TInterface, TImplementation>() where TImplementation : TInterface
-{
-    _typeMappings[typeof(TInterface)] = typeof(TImplementation);
-}
+- **`ImplementationFinder.GetConcreteType(type, requestingType)`** automatically finds implementations
+- Uses "closest first" search strategy based on requesting type's assembly
+- Throws clear errors for zero or multiple implementations
 
-// In Resolve: check _typeMappings first
-```
-
-**Option B: Registration with instance**
-```csharp
-public void RegisterInstance<T>(T instance)
-{
-    // Pre-cache the instance
-}
-```
+See `PLAN-interface-resolution.md` for full implementation details.
 
 ---
 
-### 5. Primitive/Value Support
+## Implementation Status
 
-**Option A: Factory registration**
-```csharp
-public void Register<T>(Func<T> factory)
-{
-    // Store and invoke factory when T is requested
-}
+| Step | Task | Status |
+|------|------|--------|
+| 1 | Fix thread safety (ConcurrentDictionary) | ✅ Done |
+| 2 | Add circular dependency detection | ✅ Done |
+| 3 | Add concurrency tests | ✅ Done |
+| 4 | Interface resolution (auto-discovery) | ✅ Done |
 
-// Usage:
-di.Register(() => "connection-string");
-di.Register(() => 5000); // port number
-```
+## Remaining Work
 
-**Option B: Named registrations**
-```csharp
-public void Register<T>(string name, T value);
-public T Resolve<T>(string name);
-```
+None. All critical issues have been addressed.
+
+**Deferred:** Scoped lifetime implementation requires scope context management (begin/end scope, scope tracking, disposal). Too complex for the current scope - defer to future version if needed.
 
 ---
 
-## Suggested Implementation Order
+## Design Decisions (Out of Scope)
 
-| Step | Task | Complexity |
-|------|------|------------|
-| 1 | Fix thread safety (ConcurrentDictionary) | Low |
-| 2 | Add circular dependency detection | Low |
-| 3 | Remove Scoped/Transient or implement Transient | Low-Medium |
-| 4 | Add `Register<TInterface, TImpl>()` | Medium |
-| 5 | Add factory registration | Medium |
-| 6 | Add concurrency tests | Low |
-| 7 | Implement Scoped lifetime | High |
+The following features are **intentionally not implemented** to preserve MagicDI's zero-configuration philosophy:
+
+### No explicit `Register<TInterface, TImpl>()`
+
+MagicDI uses auto-discovery - implementations are found automatically via assembly scanning with a "closest first" strategy. Adding explicit registration would:
+- Defeat the "magic" zero-configuration design
+- Duplicate functionality available in full-featured containers (Autofac, Microsoft.Extensions.DependencyInjection)
+- Add API surface and complexity for marginal benefit
+
+**If you need explicit registration, use a traditional DI container.**
+
+### No factory registration for primitives/values
+
+Primitives (int, string, bool, etc.) are intentionally rejected. This is by design because:
+- DI containers manage **object graphs**, not configuration values
+- Configuration belongs in dedicated systems (IConfiguration, environment variables, appsettings.json)
+- Mixing DI and configuration blurs responsibilities and couples classes to the container
+- Classes needing configuration should depend on `IConfiguration` or strongly-typed options
+
+**If you need primitive injection, use the Options pattern or a configuration system.**
