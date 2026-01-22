@@ -63,7 +63,9 @@ namespace MagicDI.Tests
 
                 // Assert
                 act.Should().Throw<InvalidOperationException>(because: "there is no implementation for the interface")
-                    .WithMessage("*No implementation found*", because: "the error message should explain the problem");
+                    .WithMessage("*No implementation found*", because: "the error message should explain the problem")
+                    .WithMessage("*IUnimplementedInterface*", because: "the error message should include the interface type name")
+                    .WithMessage("*Ensure*concrete class*exists*", because: "the error message should provide guidance");
             }
 
             [Fact]
