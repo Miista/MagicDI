@@ -10,6 +10,47 @@ namespace MagicDI.Tests
     {
         public class Lifetimes
         {
+            public class BasicSingletonBehavior
+            {
+                [Fact]
+                public void Returns_same_instance_for_singleton_lifetime()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    var instance1 = di.Resolve<LeafClass>();
+                    var instance2 = di.Resolve<LeafClass>();
+
+                    // Assert
+                    instance1.Should().BeSameAs(instance2, because: "singleton lifetime means the same instance is returned for all resolutions");
+                }
+
+                [Fact]
+                public void Shares_singleton_instances_across_dependency_graphs()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    var instance1 = di.Resolve<SingletonParent>();
+                    var instance2 = di.Resolve<SingletonGrandparent>();
+
+                    // Assert
+                    instance1.Leaf.Should().BeSameAs(instance2.Parent.Leaf, because: "singleton instances should be shared across different dependency graphs");
+                }
+
+                public class SingletonParent(LeafClass leaf)
+                {
+                    public LeafClass Leaf { get; } = leaf;
+                }
+
+                public class SingletonGrandparent(SingletonParent parent)
+                {
+                    public SingletonParent Parent { get; } = parent;
+                }
+            }
+
             public class LeafNodes
             {
                 [Fact]
