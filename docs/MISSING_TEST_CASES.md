@@ -12,6 +12,8 @@ The `Lifetime.Scoped` enum value exists in `Lifetime.cs` but is never used or te
 
 **Location:** `src/MagicDI/Lifetime.cs`
 
+**Plan:** [plan-01-remove-scoped-enum.md](plans/plan-01-remove-scoped-enum.md)
+
 ---
 
 ### 2. Value Types / Structs
@@ -32,6 +34,8 @@ No tests for value type resolution behavior:
 
 **Location:** `MagicDITests.General.ErrorHandling`
 
+**Plan:** [plan-02-value-types.md](plans/plan-02-value-types.md)
+
 ---
 
 ### 3. Generic Type Resolution
@@ -45,6 +49,8 @@ No tests for generic type handling:
 
 **Location:** New `MagicDITests.GenericTypes.cs` or extend `General`
 
+**Plan:** [plan-03-generic-types.md](plans/plan-03-generic-types.md)
+
 ---
 
 ### 4. Assembly/Implementation Discovery Edge Cases
@@ -57,6 +63,8 @@ The `ImplementationFinder` has untested error handling:
 - Diamond dependency scenarios
 
 **Location:** New `MagicDITests.ImplementationFinder.cs`
+
+**Plan:** [plan-04-implementation-finder.md](plans/plan-04-implementation-finder.md)
 
 ---
 
@@ -84,6 +92,8 @@ The `ImplementationFinder` has untested error handling:
 
 **Location:** `MagicDITests.General.ConstructorSelection`
 
+**Plan:** [plan-05-constructor-selection.md](plans/plan-05-constructor-selection.md)
+
 ---
 
 ### 6. Lifetime Attribute Edge Cases
@@ -96,6 +106,8 @@ The `ImplementationFinder` has untested error handling:
 **Action:** Update `LifetimeResolver` to use `GetCustomAttribute<LifetimeAttribute>(inherit: true)` which walks the inheritance chain with derived class attributes taking precedence.
 
 **Location:** `MagicDITests.Lifetimes.cs` - new `AttributeEdgeCases` nested class
+
+**Plan:** [plan-06-lifetime-attributes.md](plans/plan-06-lifetime-attributes.md)
 
 ---
 
@@ -111,6 +123,8 @@ Only `int` and `string` are explicitly tested for rejection. Missing:
 
 **Location:** `MagicDITests.General.ErrorHandling`
 
+**Plan:** [plan-07-additional-primitives.md](plans/plan-07-additional-primitives.md)
+
 ---
 
 ### 8. Context Stack Cleanup on Exceptions
@@ -120,6 +134,8 @@ Only `int` and `string` are explicitly tested for rejection. Missing:
 - Container remains usable after various exception types
 
 **Location:** `MagicDITests.CircularDependencies.Recovery` or new `ErrorRecovery` class
+
+**Plan:** [plan-08-exception-recovery.md](plans/plan-08-exception-recovery.md)
 
 ---
 
@@ -133,6 +149,8 @@ Only `int` and `string` are explicitly tested for rejection. Missing:
 - Race condition in singleton cache population
 
 **Location:** `MagicDITests.ThreadSafety.cs`
+
+**Plan:** [plan-09-concurrency.md](plans/plan-09-concurrency.md)
 
 ---
 
@@ -155,6 +173,8 @@ public void Singletons_are_isolated_per_container_instance()
 ```
 
 **Location:** `MagicDITests.General` or `MagicDITests.Lifetimes`
+
+**Plan:** [plan-10-container-isolation.md](plans/plan-10-container-isolation.md)
 
 ---
 
