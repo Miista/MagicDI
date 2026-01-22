@@ -79,9 +79,11 @@ The `ImplementationFinder` has untested error handling:
 ### 6. Lifetime Attribute Edge Cases
 
 - `[Lifetime]` attribute on interface (should be ignored, use implementation's)
-- `[Lifetime]` on base class vs derived class (inheritance behavior)
+- `[Lifetime]` on base class vs derived class: use the attribute closest in the inheritance hierarchy to the concrete type being instantiated (derived wins over base)
 - `[Lifetime]` on abstract class
 - Multiple `[Lifetime]` attributes on same class
+
+**Action:** Update `LifetimeResolver` to use `GetCustomAttribute<LifetimeAttribute>(inherit: true)` which walks the inheritance chain with derived class attributes taking precedence.
 
 **Location:** `MagicDITests.Lifetimes.cs` - new `AttributeEdgeCases` nested class
 
