@@ -10,6 +10,47 @@ namespace MagicDI.Tests
     {
         public class Lifetimes
         {
+            public class BasicSingletonBehavior
+            {
+                [Fact]
+                public void Returns_same_instance_for_singleton_lifetime()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    var instance1 = di.Resolve<LeafClass>();
+                    var instance2 = di.Resolve<LeafClass>();
+
+                    // Assert
+                    instance1.Should().BeSameAs(instance2, because: "singleton lifetime means the same instance is returned for all resolutions");
+                }
+
+                [Fact]
+                public void Shares_singleton_instances_across_dependency_graphs()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    var instance1 = di.Resolve<SingletonParent>();
+                    var instance2 = di.Resolve<SingletonGrandparent>();
+
+                    // Assert
+                    instance1.Leaf.Should().BeSameAs(instance2.Parent.Leaf, because: "singleton instances should be shared across different dependency graphs");
+                }
+
+                public class SingletonParent(LeafClass leaf)
+                {
+                    public LeafClass Leaf { get; } = leaf;
+                }
+
+                public class SingletonGrandparent(SingletonParent parent)
+                {
+                    public SingletonParent Parent { get; } = parent;
+                }
+            }
+
             public class LeafNodes
             {
                 [Fact]
@@ -303,6 +344,63 @@ namespace MagicDI.Tests
 
                     // Assert
                     instance1.SingletonDep.Should().BeSameAs(instance2.SingletonDep, because: "singleton dependencies retain their singleton behavior even in transient parents");
+                }
+            }
+
+            public class SingletonAcrossCallContexts
+            {
+                [Fact]
+                public async System.Threading.Tasks.Task Singleton_shared_across_async_contexts()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    var task1 = System.Threading.Tasks.Task.Run(() => di.Resolve<LeafClass>());
+                    var task2 = System.Threading.Tasks.Task.Run(() => di.Resolve<ClassWithSingletonDeps>());
+                    var task3 = System.Threading.Tasks.Task.Run(() => di.Resolve<LeafClass>());
+
+                    await System.Threading.Tasks.Task.WhenAll(task1, task2, task3);
+                    var result1 = await task1;
+                    var result2 = await task2;
+                    var result3 = await task3;
+
+                    // Assert
+                    result1.Should().NotBeNull();
+                    result2.Should().NotBeNull();
+                    result3.Should().NotBeNull();
+                    result1.Should().BeSameAs(result3,
+                        because: "singleton instances should be shared across async contexts");
+                }
+
+                [Fact]
+                public void Nested_resolve_calls_maintain_singleton_sharing()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    var instance = di.Resolve<ClassWithSingletonDeps>();
+
+                    // Assert
+                    instance.Should().NotBeNull();
+                    instance.Dep1.Should().NotBeNull(
+                        because: "nested dependencies should be resolved during the resolution chain");
+                }
+
+                [Fact]
+                public void Singleton_shared_across_nested_and_direct_resolutions()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    var parent = di.Resolve<ClassWithSingletonDeps>();
+                    var directDep = di.Resolve<SingletonDep1>();
+
+                    // Assert
+                    parent.Dep1.Should().BeSameAs(directDep,
+                        because: "singleton instances should be shared across nested and direct resolutions");
                 }
             }
 

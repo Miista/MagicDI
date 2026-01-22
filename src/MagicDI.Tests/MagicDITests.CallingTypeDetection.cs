@@ -82,29 +82,6 @@ namespace MagicDI.Tests
                         because: "resolution should work regardless of synchronization context");
                 }
 
-                [Fact]
-                public async Task Multiple_async_resolves_all_succeed()
-                {
-                    // Arrange
-                    var di = new MagicDI();
-
-                    // Act
-                    var task1 = Task.Run(() => di.Resolve<SimpleService>());
-                    var task2 = Task.Run(() => di.Resolve<ServiceWithDependency>());
-                    var task3 = Task.Run(() => di.Resolve<SimpleService>());
-
-                    await Task.WhenAll(task1, task2, task3);
-                    var result1 = await task1;
-                    var result2 = await task2;
-                    var result3 = await task3;
-
-                    // Assert
-                    result1.Should().NotBeNull();
-                    result2.Should().NotBeNull();
-                    result3.Should().NotBeNull();
-                    result1.Should().BeSameAs(result3,
-                        because: "singleton instances should be shared across async contexts");
-                }
             }
 
             public class LambdaAndDelegateScenarios
@@ -199,36 +176,6 @@ namespace MagicDI.Tests
 
                 [MethodImpl(MethodImplOptions.NoInlining)]
                 private SimpleService Level3(MagicDI di) => di.Resolve<SimpleService>();
-
-                [Fact]
-                public void Nested_resolve_calls_maintain_instance_sharing()
-                {
-                    // Arrange
-                    var di = new MagicDI();
-
-                    // Act
-                    var instance = di.Resolve<ServiceWithDependency>();
-
-                    // Assert
-                    instance.Should().NotBeNull();
-                    instance.Dependency.Should().NotBeNull(
-                        because: "nested dependencies should be resolved during the resolution chain");
-                }
-
-                [Fact]
-                public void Recursive_dependency_resolution_shares_singletons()
-                {
-                    // Arrange
-                    var di = new MagicDI();
-
-                    // Act
-                    var service1 = di.Resolve<ServiceWithDependency>();
-                    var service2 = di.Resolve<SimpleService>();
-
-                    // Assert
-                    service1.Dependency.Should().BeSameAs(service2,
-                        because: "singleton instances should be shared across nested and direct resolutions");
-                }
             }
 
             public class EdgeCases

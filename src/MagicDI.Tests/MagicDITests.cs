@@ -106,37 +106,6 @@ namespace MagicDI.Tests
                 }
             }
 
-            public class SingletonBehavior
-            {
-                [Fact]
-                public void Returns_same_instance_for_singleton_lifetime()
-                {
-                    // Arrange
-                    var di = new MagicDI();
-
-                    // Act
-                    var instance1 = di.Resolve<SimpleClass>();
-                    var instance2 = di.Resolve<SimpleClass>();
-
-                    // Assert
-                    instance1.Should().BeSameAs(instance2, because: "singleton lifetime means the same instance is returned for all resolutions");
-                }
-
-                [Fact]
-                public void Shares_singleton_instances_across_dependency_graphs()
-                {
-                    // Arrange
-                    var di = new MagicDI();
-
-                    // Act
-                    var instance1 = di.Resolve<ClassWithDependency>();
-                    var instance2 = di.Resolve<ClassWithNestedDependency>();
-
-                    // Assert
-                    instance1.Dependency.Should().BeSameAs(instance2.Dependency.Dependency, because: "singleton instances should be shared across different dependency graphs");
-                }
-            }
-
             public class ConstructorSelection
             {
                 [Fact]
