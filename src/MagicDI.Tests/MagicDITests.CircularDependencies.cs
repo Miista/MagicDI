@@ -143,7 +143,7 @@ namespace MagicDI.Tests
                 public SelfReferencingClass(SelfReferencingClass self) { }
             }
 
-            public class NonCircularClass { }
+            public class NonCircularClass;
 
             #endregion
         }

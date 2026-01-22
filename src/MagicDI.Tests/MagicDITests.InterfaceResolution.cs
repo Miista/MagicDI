@@ -2,6 +2,8 @@ using System;
 using FluentAssertions;
 using Xunit;
 
+// ReSharper disable ClassNeverInstantiated.Global
+
 namespace MagicDI.Tests
 {
     public partial class MagicDITests
@@ -322,24 +324,14 @@ namespace MagicDI.Tests
                 public override void DoWork() { }
             }
 
-            public class ClassWithInterfaceDependency
+            public class ClassWithInterfaceDependency(ISimpleService service)
             {
-                public ISimpleService Service { get; }
-
-                public ClassWithInterfaceDependency(ISimpleService service)
-                {
-                    Service = service;
-                }
+                public ISimpleService Service { get; } = service;
             }
 
-            public class ClassWithNestedInterfaceDependency
+            public class ClassWithNestedInterfaceDependency(ClassWithInterfaceDependency wrapper)
             {
-                public ClassWithInterfaceDependency Wrapper { get; }
-
-                public ClassWithNestedInterfaceDependency(ClassWithInterfaceDependency wrapper)
-                {
-                    Wrapper = wrapper;
-                }
+                public ClassWithInterfaceDependency Wrapper { get; } = wrapper;
             }
 
             // === Abstract class test helpers ===
@@ -378,25 +370,15 @@ namespace MagicDI.Tests
             }
 
             // Class that depends on an abstract class
-            public class ClassWithAbstractDependency
+            public class ClassWithAbstractDependency(AbstractRepository repository)
             {
-                public AbstractRepository Repository { get; }
-
-                public ClassWithAbstractDependency(AbstractRepository repository)
-                {
-                    Repository = repository;
-                }
+                public AbstractRepository Repository { get; } = repository;
             }
 
             // Class with nested abstract class dependency
-            public class ClassWithNestedAbstractDependency
+            public class ClassWithNestedAbstractDependency(ClassWithAbstractDependency wrapper)
             {
-                public ClassWithAbstractDependency Wrapper { get; }
-
-                public ClassWithNestedAbstractDependency(ClassWithAbstractDependency wrapper)
-                {
-                    Wrapper = wrapper;
-                }
+                public ClassWithAbstractDependency Wrapper { get; } = wrapper;
             }
 
             // Disposable abstract class for lifetime testing

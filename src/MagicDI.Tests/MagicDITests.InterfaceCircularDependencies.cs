@@ -14,43 +14,38 @@ namespace MagicDI.Tests
             public interface IServiceA { void DoWork(); }
             public interface IServiceB { void DoWork(); }
 
-            public class ServiceA : IServiceA
+            public class ServiceA(IServiceB serviceB) : IServiceA
             {
-                public IServiceB ServiceB { get; }
-                public ServiceA(IServiceB serviceB) { ServiceB = serviceB; }
+                public IServiceB ServiceB { get; } = serviceB;
                 public void DoWork() { }
             }
 
-            public class ServiceB : IServiceB
+            public class ServiceB(IServiceA serviceA) : IServiceB
             {
-                public IServiceA ServiceA { get; }
-                public ServiceB(IServiceA serviceA) { ServiceA = serviceA; }
+                public IServiceA ServiceA { get; } = serviceA;
                 public void DoWork() { }
             }
 
             // Scenario 2: Mixed Interface/Concrete Circular
             public interface IMixedService { void DoWork(); }
 
-            public class MixedConcreteClass
+            public class MixedConcreteClass(IMixedService service)
             {
-                public IMixedService Service { get; }
-                public MixedConcreteClass(IMixedService service) { Service = service; }
+                public IMixedService Service { get; } = service;
             }
 
-            public class MixedServiceImpl : IMixedService
+            public class MixedServiceImpl(MixedConcreteClass concrete) : IMixedService
             {
-                public MixedConcreteClass Concrete { get; }
-                public MixedServiceImpl(MixedConcreteClass concrete) { Concrete = concrete; }
+                public MixedConcreteClass Concrete { get; } = concrete;
                 public void DoWork() { }
             }
 
             // Scenario 3: Self-Referencing Through Interface
             public interface ISelfReferencing { void DoSomething(); }
 
-            public class SelfReferencingImpl : ISelfReferencing
+            public class SelfReferencingImpl(ISelfReferencing self) : ISelfReferencing
             {
-                public ISelfReferencing Self { get; }
-                public SelfReferencingImpl(ISelfReferencing self) { Self = self; }
+                public ISelfReferencing Self { get; } = self;
                 public void DoSomething() { }
             }
 
@@ -59,24 +54,21 @@ namespace MagicDI.Tests
             public interface IBeta { void Beta(); }
             public interface IGamma { void Gamma(); }
 
-            public class AlphaImpl : IAlpha
+            public class AlphaImpl(IBeta beta) : IAlpha
             {
-                public IBeta Beta { get; }
-                public AlphaImpl(IBeta beta) { Beta = beta; }
+                public IBeta Beta { get; } = beta;
                 public void Alpha() { }
             }
 
-            public class BetaImpl : IBeta
+            public class BetaImpl(IGamma gamma) : IBeta
             {
-                public IGamma Gamma { get; }
-                public BetaImpl(IGamma gamma) { Gamma = gamma; }
+                public IGamma Gamma { get; } = gamma;
                 public void Beta() { }
             }
 
-            public class GammaImpl : IGamma
+            public class GammaImpl(IAlpha alpha) : IGamma
             {
-                public IAlpha Alpha { get; }
-                public GammaImpl(IAlpha alpha) { Alpha = alpha; }
+                public IAlpha Alpha { get; } = alpha;
                 public void Gamma() { }
             }
 
@@ -84,33 +76,34 @@ namespace MagicDI.Tests
             public interface IChainStart { void Start(); }
             public interface IChainEnd { void End(); }
 
-            public class ConcreteEntry
+            public class ConcreteEntry(IChainStart chainStart)
             {
-                public IChainStart ChainStart { get; }
-                public ConcreteEntry(IChainStart chainStart) { ChainStart = chainStart; }
+                public IChainStart ChainStart { get; } = chainStart;
             }
 
-            public class ChainStartImpl : IChainStart
+            public class ChainStartImpl(IChainEnd chainEnd) : IChainStart
             {
-                public IChainEnd ChainEnd { get; }
-                public ChainStartImpl(IChainEnd chainEnd) { ChainEnd = chainEnd; }
+                public IChainEnd ChainEnd { get; } = chainEnd;
                 public void Start() { }
             }
 
-            public class ChainEndImpl : IChainEnd
+            public class ChainEndImpl(IChainStart chainStart) : IChainEnd
             {
-                public IChainStart ChainStart { get; }
-                public ChainEndImpl(IChainStart chainStart) { ChainStart = chainStart; }
+                public IChainStart ChainStart { get; } = chainStart;
                 public void End() { }
             }
 
             // Non-Circular Control
             public interface INonCircularService { void Work(); }
-            public class NonCircularServiceImpl : INonCircularService { public void Work() { } }
-            public class NonCircularConsumer
+
+            public class NonCircularServiceImpl : INonCircularService
             {
-                public INonCircularService Service { get; }
-                public NonCircularConsumer(INonCircularService service) { Service = service; }
+                public void Work() { }
+            }
+            
+            public class NonCircularConsumer(INonCircularService service)
+            {
+                public INonCircularService Service { get; } = service;
             }
 
             #endregion

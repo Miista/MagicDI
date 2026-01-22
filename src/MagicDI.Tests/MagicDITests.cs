@@ -3,6 +3,9 @@ using System.Reflection;
 using FluentAssertions;
 using Xunit;
 
+// ReSharper disable UnusedAutoPropertyAccessor.Global
+// ReSharper disable ClassNeverInstantiated.Global
+
 namespace MagicDI.Tests
 {
     public partial class MagicDITests
@@ -198,41 +201,25 @@ namespace MagicDI.Tests
 
             #region Test Classes
 
-            public class SimpleClass { }
+            public class SimpleClass;
 
-            public class ClassWithDependency
+            public class ClassWithDependency(SimpleClass dependency)
             {
-                public SimpleClass Dependency { get; }
-
-                public ClassWithDependency(SimpleClass dependency)
-                {
-                    Dependency = dependency;
-                }
+                public SimpleClass Dependency { get; } = dependency;
             }
 
-            public class ClassWithNestedDependency
+            public class ClassWithNestedDependency(ClassWithDependency dependency)
             {
-                public ClassWithDependency Dependency { get; }
-
-                public ClassWithNestedDependency(ClassWithDependency dependency)
-                {
-                    Dependency = dependency;
-                }
+                public ClassWithDependency Dependency { get; } = dependency;
             }
 
-            public class ClassWithMultipleDependencies
+            public class ClassWithMultipleDependencies(
+                SimpleClass dependency1,
+                ClassWithDependency dependency2
+            )
             {
-                public SimpleClass Dependency1 { get; }
-                public ClassWithDependency Dependency2 { get; }
-
-                public ClassWithMultipleDependencies(
-                    SimpleClass dependency1,
-                    ClassWithDependency dependency2
-                )
-                {
-                    Dependency1 = dependency1;
-                    Dependency2 = dependency2;
-                }
+                public SimpleClass Dependency1 { get; } = dependency1;
+                public ClassWithDependency Dependency2 { get; } = dependency2;
             }
 
             public class ClassWithMultipleConstructors
@@ -271,30 +258,26 @@ namespace MagicDI.Tests
                 }
             }
 
-            public class DeepLevel1 { }
+            public class DeepLevel1;
 
-            public class DeepLevel2
+            public class DeepLevel2(DeepLevel1 level1)
             {
-                public DeepLevel1 Level1 { get; }
-                public DeepLevel2(DeepLevel1 level1) => Level1 = level1;
+                public DeepLevel1 Level1 { get; } = level1;
             }
 
-            public class DeepLevel3
+            public class DeepLevel3(DeepLevel2 level2)
             {
-                public DeepLevel2 Level2 { get; }
-                public DeepLevel3(DeepLevel2 level2) => Level2 = level2;
+                public DeepLevel2 Level2 { get; } = level2;
             }
 
-            public class DeepLevel4
+            public class DeepLevel4(DeepLevel3 level3)
             {
-                public DeepLevel3 Level3 { get; }
-                public DeepLevel4(DeepLevel3 level3) => Level3 = level3;
+                public DeepLevel3 Level3 { get; } = level3;
             }
 
-            public class DeepLevel5
+            public class DeepLevel5(DeepLevel4 level4)
             {
-                public DeepLevel4 Level4 { get; }
-                public DeepLevel5(DeepLevel4 level4) => Level4 = level4;
+                public DeepLevel4 Level4 { get; } = level4;
             }
 
             public class ClassWithSameParameterCountConstructors

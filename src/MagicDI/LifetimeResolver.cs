@@ -51,7 +51,7 @@ namespace MagicDI
         /// <param name="type">The type to determine lifetime for.</param>
         /// <param name="requestingType">The type requesting this resolution, used for interface lookup.</param>
         /// <returns>The inferred or explicitly specified lifetime.</returns>
-        internal Lifetime DetermineLifetime(Type type, Type? requestingType)
+        private Lifetime DetermineLifetime(Type type, Type? requestingType)
         {
             // Resolve interface/abstract to concrete type
             var concreteType = ImplementationFinder.GetConcreteType(type, requestingType);
