@@ -156,6 +156,106 @@ namespace MagicDI.Tests
             }
 
             [Fact]
+            public void Throws_when_no_abstract_implementation_exists()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<AbstractServiceWithNoImplementation>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>(because: "there is no implementation for the abstract class")
+                    .WithMessage("*No implementation found*", because: "the error message should explain the problem");
+            }
+
+            [Fact]
+            public void Throws_when_multiple_implementations_of_abstract_class_exist()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<AbstractServiceWithMultipleImpls>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>(because: "multiple implementations create ambiguity")
+                    .WithMessage("*Multiple implementations*", because: "the error message should explain the ambiguity");
+            }
+
+            [Fact]
+            public void Resolves_abstract_class_dependency_in_constructor()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                var instance = di.Resolve<ClassWithAbstractDependency>();
+
+                // Assert
+                instance.Should().NotBeNull(because: "the container should create the class");
+                instance.Repository.Should().NotBeNull(because: "the container should resolve abstract class dependencies");
+                instance.Repository.Should().BeOfType<ConcreteRepository>(because: "the abstract class should resolve to its implementation");
+            }
+
+            [Fact]
+            public void Resolves_nested_abstract_class_dependencies()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                var instance = di.Resolve<ClassWithNestedAbstractDependency>();
+
+                // Assert
+                instance.Should().NotBeNull(because: "the container should create the top-level class");
+                instance.Wrapper.Should().NotBeNull(because: "the container should resolve the wrapper");
+                instance.Wrapper.Repository.Should().NotBeNull(because: "the container should resolve nested abstract class dependencies");
+            }
+
+            [Fact]
+            public void Determines_lifetime_from_abstract_class_implementation()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                var instance1 = di.Resolve<AbstractService>();
+                var instance2 = di.Resolve<AbstractService>();
+
+                // Assert
+                instance1.Should().BeSameAs(instance2, because: "the implementation is a singleton (no transient markers)");
+            }
+
+            [Fact]
+            public void Disposable_implementation_of_abstract_class_is_transient()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                var instance1 = di.Resolve<DisposableAbstractService>();
+                var instance2 = di.Resolve<DisposableAbstractService>();
+
+                // Assert
+                instance1.Should().NotBeSameAs(instance2, because: "IDisposable implementations should be transient");
+            }
+
+            [Fact]
+            public void Shares_singleton_implementation_across_abstract_class_resolutions()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                var fromAbstract = di.Resolve<AbstractService>();
+                var fromConcrete = di.Resolve<ConcreteService>();
+
+                // Assert
+                fromAbstract.Should().BeSameAs(fromConcrete, because: "the same singleton instance should be returned regardless of how it's requested");
+            }
+
+            [Fact]
             public void Shares_singleton_implementation_across_interface_resolutions()
             {
                 // Arrange
