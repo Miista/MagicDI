@@ -66,7 +66,7 @@ service.SomeMethod();
 
 ## Interface Resolution
 
-MagicDI automatically resolves interfaces to their concrete implementations:
+MagicDI automatically resolves interfaces to their concrete implementations using a "closest first" strategy:
 
 ```csharp
 public interface IMessageService
@@ -83,7 +83,27 @@ var di = new MagicDI();
 var service = di.Resolve<IMessageService>(); // Returns EmailService instance
 ```
 
-When there is exactly one implementation of an interface in the loaded assemblies, MagicDI will automatically discover and use it. If no implementation exists or multiple implementations are found, an `InvalidOperationException` is thrown with a helpful error message.
+### Closest-First Resolution Strategy
+
+When resolving an interface, MagicDI searches for implementations in this order:
+
+1. **Requesting type's assembly** - The assembly containing the class that needs the dependency
+2. **Referenced assemblies** - Assemblies directly referenced by the requesting assembly
+3. **All loaded assemblies** - Fallback to scanning all assemblies in the AppDomain
+
+This means multiple implementations of the same interface can coexist across different assemblies, and each consumer gets the implementation "closest" to it:
+
+```csharp
+// In AssemblyA
+public class ServiceA : ISharedService { }
+public class ConsumerA(ISharedService service) { } // Gets ServiceA
+
+// In AssemblyB
+public class ServiceB : ISharedService { }
+public class ConsumerB(ISharedService service) { } // Gets ServiceB
+```
+
+If no implementation exists, or if multiple implementations are found within the same assembly (making the choice ambiguous), an `InvalidOperationException` is thrown with a helpful error message.
 
 ## How It Works
 
@@ -196,7 +216,7 @@ The error message includes the full resolution chain to help you identify and fi
 
 - **Primitive Types**: MagicDI cannot resolve primitive types (int, string, bool, etc.) as they require explicit values
 - **Constructor Selection**: Always selects the constructor with the most parameters
-- **Single Implementation**: Interface resolution requires exactly one implementation; multiple implementations cause an error
+- **Same-Assembly Ambiguity**: If multiple implementations of an interface exist in the same assembly, resolution fails (implementations across different assemblies work fine)
 - **No Scoped Lifetime**: Scoped lifetime is not currently supported
 
 ## Building from Source
