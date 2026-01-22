@@ -114,6 +114,88 @@ namespace MagicDI.Tests
             }
 
             #endregion
+
+            #region Tests 1-5: Core Detection Tests
+
+            [Fact]
+            public void Throws_when_direct_interface_circular_dependency_detected()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<IServiceA>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>(
+                        because: "interface-based circular dependencies must be detected")
+                    .WithMessage("*circular*",
+                        because: "the error message should indicate a circular dependency");
+            }
+
+            [Fact]
+            public void Error_message_contains_concrete_type_names_not_interfaces()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<IServiceA>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>()
+                    .WithMessage("*ServiceA*",
+                        because: "the error should mention the concrete implementation name")
+                    .WithMessage("*ServiceB*",
+                        because: "all concrete types in the circular chain should be mentioned");
+            }
+
+            [Fact]
+            public void Throws_when_mixed_interface_concrete_circular_dependency()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<MixedConcreteClass>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>(
+                        because: "circular dependencies between concrete classes and interface implementations must be detected")
+                    .WithMessage("*circular*");
+            }
+
+            [Fact]
+            public void Throws_when_mixed_circular_resolved_via_interface()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<IMixedService>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>(
+                        because: "the same circular dependency should be detected regardless of entry point")
+                    .WithMessage("*MixedServiceImpl*");
+            }
+
+            [Fact]
+            public void Throws_when_self_referencing_through_interface()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<ISelfReferencing>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>(
+                        because: "self-referencing through an interface is still a circular dependency")
+                    .WithMessage("*SelfReferencingImpl*");
+            }
+
+            #endregion
         }
     }
 }
