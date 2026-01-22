@@ -7,6 +7,6 @@ namespace MagicDI.Tests.AssemblyA
     /// </summary>
     public class SharedServiceA : ISharedService
     {
-        public string GetAssemblyName() => "AssemblyA";
+        public string GetAssemblyName() => GetType().Assembly.GetName().Name;
     }
 }

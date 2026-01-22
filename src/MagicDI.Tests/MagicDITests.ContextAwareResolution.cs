@@ -1,10 +1,54 @@
+using System;
 using FluentAssertions;
+using FluentAssertions.Execution;
+using FluentAssertions.Primitives;
 using MagicDI.Tests.AssemblyA;
 using MagicDI.Tests.AssemblyB;
 using Xunit;
 
 namespace MagicDI.Tests
 {
+    public static class ObjectAssertionsExtensions
+    {
+        extension(ObjectAssertions self)
+        {
+            [CustomAssertion]
+            public void BeInSameAssemblyAs(
+                Type otherType, string because = "", params object[] becauseArgs)
+            {
+                var thisAssembly = self.Subject.GetType().Assembly;
+                var otherAssembly = otherType.Assembly;
+                
+                Execute.Assertion
+                    .ForCondition(thisAssembly == otherAssembly)
+                    .BecauseOf(because, becauseArgs)
+                    .FailWith(
+                        "Expected {context:object} to be in same assembly as {0}{reason}, but found {1}.",
+                        otherAssembly.GetName().Name,
+                        thisAssembly.GetName().Name
+                    );
+            }
+            
+            [CustomAssertion]
+            public void BeInSameAssemblyAs<TOther>(
+                string because = "", params object[] becauseArgs)
+            {
+                var otherType = typeof(TOther);
+                var thisAssembly = self.Subject.GetType().Assembly;
+                var otherAssembly = otherType.Assembly;
+                
+                Execute.Assertion
+                    .ForCondition(thisAssembly == otherAssembly)
+                    .BecauseOf(because, becauseArgs)
+                    .FailWith(
+                        "Expected {context:object} to be in same assembly as {0}{reason}, but found {1}.",
+                        otherAssembly.GetName().Name,
+                        thisAssembly.GetName().Name
+                    );
+            }
+        }
+    }
+
     public partial class MagicDITests
     {
         public class ContextAwareResolution
@@ -21,8 +65,11 @@ namespace MagicDI.Tests
                     var service = ResolverHelperA.ResolveSharedService(di);
 
                     // Assert
-                    service.GetAssemblyName().Should().Be("AssemblyA",
-                        because: "the Resolve call originated from AssemblyA, so its implementation should be found first");
+                    service.Should()
+                        .BeInSameAssemblyAs(
+                            typeof(ResolverHelperA),
+                            because: "the Resolve call originated from AssemblyA, so its implementation should be found first"
+                        );
                 }
 
                 [Fact]
@@ -35,8 +82,11 @@ namespace MagicDI.Tests
                     var service = ResolverHelperB.ResolveSharedService(di);
 
                     // Assert
-                    service.GetAssemblyName().Should().Be("AssemblyB",
-                        because: "the Resolve call originated from AssemblyB, so its implementation should be found first");
+                    service.Should()
+                        .BeInSameAssemblyAs(
+                            typeof(ResolverHelperB),
+                            because: "the Resolve call originated from AssemblyB, so its implementation should be found first"
+                        );
                 }
             }
 
@@ -52,7 +102,9 @@ namespace MagicDI.Tests
                     var consumer = di.Resolve<ConsumerA>();
 
                     // Assert
-                    consumer.Service.GetAssemblyName().Should().Be("AssemblyA",
+                    consumer.Service.Should().NotBeNull(because: "the service dependency should be resolved");
+                    consumer.Service.Should().BeOfType<SharedServiceA>(because: "that service is closest to ConsumerA");
+                    consumer.Service.GetAssemblyName().Should().Be(typeof(SharedServiceA).Assembly.GetName().Name,
                         because: "ConsumerA is in AssemblyA, so its ISharedService dependency should resolve to SharedServiceA");
                 }
 
@@ -66,8 +118,14 @@ namespace MagicDI.Tests
                     var consumer = di.Resolve<ConsumerB>();
 
                     // Assert
-                    consumer.Service.GetAssemblyName().Should().Be("AssemblyB",
-                        because: "ConsumerB is in AssemblyB, so its ISharedService dependency should resolve to SharedServiceB");
+                    consumer.Service.Should().NotBeNull(because: "the service dependency should be resolved");
+                    consumer.Service.Should().BeOfType<SharedServiceB>(because: "that service is closest to ConsumerA");
+                    consumer.Service.Should()
+                        .BeInSameAssemblyAs<SharedServiceB>(
+                            because: "{0} is in assembly {1}, so its ISharedService dependency should resolve to SharedServiceB",
+                            nameof(ConsumerB),
+                            ResolverHelperB.AssemblyName
+                        );
                 }
             }
 
@@ -84,11 +142,19 @@ namespace MagicDI.Tests
                     var consumerB = di.Resolve<ConsumerB>();
 
                     // Assert
-                    consumerA.Service.Should().NotBeSameAs(consumerB.Service,
-                        because: "each consumer gets its own assembly's implementation");
+                    consumerA.Service.GetType().Should().NotBeSameAs(consumerB.Service.GetType(), because: "the contexts differ");
+                    consumerA.Service.Should().NotBeSameAs(consumerB.Service, because: "each consumer gets its own assembly's implementation");
 
-                    consumerA.Service.GetAssemblyName().Should().Be("AssemblyA");
-                    consumerB.Service.GetAssemblyName().Should().Be("AssemblyB");
+                    consumerA.Service.Should()
+                        .BeInSameAssemblyAs(
+                            typeof(ResolverHelperA),
+                            because: "the implementation of ISharedService for ConsumerA comes from AssemblyA"
+                        );
+                    consumerB.Service.Should()
+                        .BeInSameAssemblyAs(
+                            typeof(ResolverHelperB),
+                            because: "the implementation of ISharedService for ConsumerB comes from AssemblyB"
+                        );
                 }
 
                 [Fact]
@@ -104,10 +170,10 @@ namespace MagicDI.Tests
                     var serviceB2 = ResolverHelperB.ResolveSharedService(di);
 
                     // Assert
-                    serviceA1.GetAssemblyName().Should().Be("AssemblyA");
-                    serviceB1.GetAssemblyName().Should().Be("AssemblyB");
-                    serviceA2.GetAssemblyName().Should().Be("AssemblyA");
-                    serviceB2.GetAssemblyName().Should().Be("AssemblyB");
+                    serviceA1.Should().BeInSameAssemblyAs(typeof(ResolverHelperA));
+                    serviceB1.Should().BeInSameAssemblyAs(typeof(ResolverHelperB));
+                    serviceA2.Should().BeInSameAssemblyAs(typeof(ResolverHelperA));
+                    serviceB2.Should().BeInSameAssemblyAs(typeof(ResolverHelperB));
                 }
             }
 

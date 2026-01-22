@@ -9,6 +9,8 @@ namespace MagicDI.Tests.AssemblyA
     /// </summary>
     public static class ResolverHelperA
     {
+        public static string AssemblyName => typeof(ResolverHelperA).Assembly.GetName().Name;
+        
         public static ISharedService ResolveSharedService(MagicDI di)
         {
             // This call originates from AssemblyA, so AssemblyA is searched first
