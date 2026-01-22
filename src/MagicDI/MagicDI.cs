@@ -2,7 +2,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -58,7 +57,7 @@ namespace MagicDI
                 return result;
 
             throw new InvalidOperationException(
-                $"Failed to cast resolved instance of type {resolved?.GetType().Name ?? "null"} to requested type {typeof(T).Name}");
+                $"Failed to cast resolved instance of type {resolved.GetType().Name} to requested type {typeof(T).Name}");
         }
 
         /// <summary>
@@ -78,7 +77,7 @@ namespace MagicDI
         /// <param name="type">The type to resolve.</param>
         /// <param name="requestingType">The type requesting this resolution, used for interface lookup.</param>
         /// <returns>An instance of the specified type.</returns>
-        internal object Resolve(Type type, Type? requestingType)
+        private object Resolve(Type type, Type? requestingType)
         {
             // Resolve interface/abstract to concrete type
             var concreteType = ImplementationFinder.GetConcreteType(type, requestingType);

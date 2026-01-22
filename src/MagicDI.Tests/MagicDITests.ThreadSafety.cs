@@ -151,20 +151,16 @@ namespace MagicDI.Tests
                 public static void ResetCounter() => _instanceCount = 0;
             }
 
-            public class ThreadTestClass1 { }
-            public class ThreadTestClass2 { }
-            public class ThreadTestClass3 { }
-            public class ThreadTestClass4 { }
-            public class ThreadTestClass5 { }
+            public class ThreadTestClass1;
+            public class ThreadTestClass2;
+            public class ThreadTestClass3;
+            public class ThreadTestClass4;
+            public class ThreadTestClass5;
 
-            public class SharedDependency { }
-            public class ParentWithSharedDependency
+            public class SharedDependency;
+            public class ParentWithSharedDependency(SharedDependency dependency)
             {
-                public SharedDependency Dependency { get; }
-                public ParentWithSharedDependency(SharedDependency dependency)
-                {
-                    Dependency = dependency;
-                }
+                public SharedDependency Dependency { get; } = dependency;
             }
 
             #endregion

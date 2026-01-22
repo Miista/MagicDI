@@ -308,10 +308,10 @@ namespace MagicDI.Tests
 
             #region Test Helper Classes
 
-            public class LeafClass { }
+            public class LeafClass;
 
-            public class SingletonDep1 { }
-            public class SingletonDep2 { }
+            public class SingletonDep1;
+            public class SingletonDep2;
 
             public class ClassWithSingletonDeps(SingletonDep1 dep1, SingletonDep2 dep2)
             {
@@ -334,18 +334,13 @@ namespace MagicDI.Tests
                 public void Dispose() { }
             }
 
-            public class ClassDependingOnDisposable
+            public class ClassDependingOnDisposable(DisposableClass disposable)
             {
-                public DisposableClass Disposable { get; }
-
-                public ClassDependingOnDisposable(DisposableClass disposable)
-                {
-                    Disposable = disposable;
-                }
+                public DisposableClass Disposable { get; } = disposable;
             }
 
             [Lifetime(Lifetime.Transient)]
-            public class ExplicitTransientClass { }
+            public class ExplicitTransientClass;
 
             [Lifetime(Lifetime.Singleton)]
             public class SingletonWithTransientDep(DisposableClass disposable)
@@ -359,14 +354,9 @@ namespace MagicDI.Tests
                 public DisposableClass Disposable { get; } = disposable;
             }
 
-            public class TransientChainLevel3
+            public class TransientChainLevel3(TransientChainLevel2 level2)
             {
-                public TransientChainLevel2 Level2 { get; }
-
-                public TransientChainLevel3(TransientChainLevel2 level2)
-                {
-                    Level2 = level2;
-                }
+                public TransientChainLevel2 Level2 { get; } = level2;
             }
 
             public class MixedDependenciesClass(LeafClass singletonDep, DisposableClass transientDep)

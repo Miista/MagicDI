@@ -118,7 +118,7 @@ namespace MagicDI
             catch (ReflectionTypeLoadException ex)
             {
                 // Some types couldn't be loaded, use the ones that could
-                types = ex.Types.Where(t => t != null).ToArray()!;
+                types = ex.Types.Where(t => t != null).ToArray();
             }
             catch
             {

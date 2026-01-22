@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MagicDI\MagicDI.csproj" />
+    <ProjectReference Include="..\MagicDI.Tests.Contracts\MagicDI.Tests.Contracts.csproj" />
+  </ItemGroup>
+</Project>
