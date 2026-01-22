@@ -26,6 +26,8 @@ No tests for value type resolution behavior:
 | Custom structs | Should fail | Yes |
 | Enums | Should fail | Yes |
 
+**Action:** Add value type check in `MagicDI.Resolve<T>()` method (not InstanceFactory, since it always goes through Resolve). Add tests for the above types.
+
 **Location:** `MagicDITests.General.ErrorHandling`
 
 ---
