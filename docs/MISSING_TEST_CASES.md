@@ -72,6 +72,16 @@ The `ImplementationFinder` has untested error handling:
 | Default parameter values | Not tested | Verify behavior |
 | Generic type constructors | Not tested | Verify selection works |
 
+#### 5a. Special Type Scenarios
+
+| Type | Test Needed |
+|------|-------------|
+| C# record types | Verify generated constructor selection |
+| Sealed classes | Should work normally |
+| Nested public classes | Should be resolvable |
+| Nested private classes | Should fail appropriately |
+| Tuple types | Should fail |
+
 **Location:** `MagicDITests.General.ConstructorSelection`
 
 ---
@@ -115,21 +125,7 @@ Only `int` and `string` are explicitly tested for rejection. Missing:
 
 ## Lower Priority (Defensive/Stress Tests)
 
-### 9. Special Type Scenarios
-
-| Type | Test Needed |
-|------|-------------|
-| C# record types | Verify generated constructor selection |
-| Sealed classes | Should work normally |
-| Nested public classes | Should be resolvable |
-| Nested private classes | Should fail appropriately |
-| Tuple types | Should fail |
-
-**Location:** New `MagicDITests.SpecialTypes.cs`
-
----
-
-### 10. Concurrency Edge Cases
+### 9. Concurrency Edge Cases
 
 - Multiple threads determining lifetime for same type simultaneously
 - Captive dependency detection under concurrent load
@@ -140,7 +136,7 @@ Only `int` and `string` are explicitly tested for rejection. Missing:
 
 ---
 
-### 11. Multiple Container Isolation
+### 10. Multiple Container Isolation
 
 Explicit test that singletons are isolated per `MagicDI` instance - currently only implicit.
 
@@ -170,11 +166,10 @@ public void Singletons_are_isolated_per_container_instance()
 | Value Types/Structs | ~5 tests | High |
 | Generic Types | ~4 tests | High |
 | Assembly Discovery | ~3 tests | High |
-| Constructor Edge Cases | ~5 tests | Medium |
+| Constructor Edge Cases | ~10 tests (includes special types) | Medium |
 | Lifetime Attributes | ~4 tests | Medium |
 | Additional Primitives | ~10 tests | Medium |
 | Exception Recovery | ~3 tests | Medium |
-| Special Types | ~5 tests | Low |
 | Concurrency Edge Cases | ~4 tests | Low |
 | Container Isolation | 1 test | Low |
 
@@ -189,7 +184,6 @@ MagicDI.Tests/
 ├── (existing files)
 ├── MagicDITests.ImplementationFinder.cs (NEW)
 ├── MagicDITests.GenericTypes.cs (NEW)
-├── MagicDITests.SpecialTypes.cs (NEW)
 └── MagicDITests.ErrorRecovery.cs (NEW)
 ```
 
