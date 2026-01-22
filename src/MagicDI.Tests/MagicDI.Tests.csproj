@@ -18,6 +18,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MagicDI\MagicDI.csproj" />
+    <ProjectReference Include="..\MagicDI.Tests.Contracts\MagicDI.Tests.Contracts.csproj" />
+    <ProjectReference Include="..\MagicDI.Tests.AssemblyA\MagicDI.Tests.AssemblyA.csproj" />
+    <ProjectReference Include="..\MagicDI.Tests.AssemblyB\MagicDI.Tests.AssemblyB.csproj" />
   </ItemGroup>
 
 </Project>
