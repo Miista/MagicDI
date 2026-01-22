@@ -69,6 +69,20 @@ namespace MagicDI.Tests
             }
 
             [Fact]
+            public void No_implementation_exception_includes_interface_type_name()
+            {
+                // Arrange
+                var di = new MagicDI();
+
+                // Act
+                Action act = () => di.Resolve<IUnimplementedInterface>();
+
+                // Assert
+                act.Should().Throw<InvalidOperationException>()
+                    .WithMessage("*IUnimplementedInterface*", because: "the error message should include the interface type name to help developers identify which interface lacks an implementation");
+            }
+
+            [Fact]
             public void Throws_when_multiple_implementations_exist()
             {
                 // Arrange
