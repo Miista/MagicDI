@@ -26,7 +26,9 @@ No tests for value type resolution behavior:
 | Custom structs | Should fail | Yes |
 | Enums | Should fail | Yes |
 
-**Action:** Add value type check in `MagicDI.Resolve<T>()` method (not InstanceFactory, since it always goes through Resolve). Add tests for the above types.
+**Action:** Add check in `MagicDI.Resolve<T>()` method (not InstanceFactory, since it always goes through Resolve). Add tests for the above types.
+
+**Investigation needed:** A simple `IsValueType` check may be too restrictive - there could be legitimate value types users want to resolve. Need to determine the right heuristic (e.g., reject primitives + specific known types like DateTime/Guid, or reject types without constructors the container can use).
 
 **Location:** `MagicDITests.General.ErrorHandling`
 
