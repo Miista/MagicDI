@@ -241,10 +241,143 @@ The error message includes the full resolution chain to help you identify and fi
 
 ## Limitations
 
-- **Primitive Types**: MagicDI cannot resolve primitive types (int, string, bool, etc.) as they require explicit values
-- **Constructor Selection**: Always selects the constructor with the most parameters
-- **Ambiguous Implementations**: If multiple implementations of an interface exist at the same distance (same namespace), resolution fails
-- **No Scoped Lifetime**: Scoped lifetime is not currently supported
+MagicDI is intentionally minimal. If you need any of the following, use a full-featured container like Microsoft.Extensions.DependencyInjection, Autofac, or Ninject.
+
+### No Constructor Parameter Configuration
+
+Constructor parameters must be resolvable types. There's no mechanism to provide specific values:
+
+```csharp
+// This will throw - MagicDI has no way to know what values to use
+public class ApiClient(string baseUrl, int timeout) { }
+
+// Workaround: wrap configuration in a resolvable class
+public class ApiConfig { public string BaseUrl { get; set; } public int Timeout { get; set; } }
+public class ApiClient(ApiConfig config) { }
+```
+
+### No Factory Delegates
+
+Cannot register factories or custom instantiation logic:
+
+```csharp
+// Not possible:
+services.AddSingleton(sp => new MyService(
+    sp.GetService<IDep>(),
+    Environment.GetEnvironmentVariable("API_KEY")
+));
+```
+
+### No Scoped Lifetime
+
+Only Singleton and Transient are supported. There's no `CreateScope()`, no `IServiceScope`, no per-request lifetime:
+
+```csharp
+// Not supported:
+services.AddScoped<DbContext>();
+using var scope = provider.CreateScope();
+```
+
+### No Named or Keyed Services
+
+Cannot have multiple implementations of the same interface distinguished by key:
+
+```csharp
+// Not possible - MagicDI picks implementations by namespace proximity, not by key
+services.AddKeyedSingleton<ICache>("redis", new RedisCache());
+services.AddKeyedSingleton<ICache>("memory", new MemoryCache());
+```
+
+### No Open Generic Resolution
+
+MagicDI cannot automatically close open generic types. If you have `Repository<T> : IRepository<T>`, resolving `IRepository<User>` will fail because the assembly scan finds `Repository<>` (open), not `Repository<User>` (closed):
+
+```csharp
+public class Repository<T> : IRepository<T> { }
+
+// This fails - MagicDI can't infer that Repository<User> implements IRepository<User>
+var repo = di.Resolve<IRepository<User>>();
+
+// Workaround: define explicit closed types
+public class UserRepository : IRepository<User> { }
+```
+
+### No Lazy<T>, Func<T>, or IEnumerable<T>
+
+Cannot inject deferred resolution, factories, or collections of implementations:
+
+```csharp
+// None of these work:
+public class MyService(
+    Lazy<IExpensive> lazy,           // Deferred resolution
+    Func<IConnection> factory,        // Factory for new instances
+    IEnumerable<IPlugin> plugins      // All implementations
+) { }
+```
+
+### No Decorators or Interceptors
+
+No AOP-style wrapping or decoration:
+
+```csharp
+// Not possible:
+services.Decorate<IService, LoggingDecorator>();
+services.AddInterceptor<CachingInterceptor>();
+```
+
+### No Disposal Tracking
+
+The container does not track or dispose `IDisposable` instances. You're responsible for their lifecycle:
+
+```csharp
+var connection = di.Resolve<DbConnection>(); // Transient, implements IDisposable
+// You must dispose this yourself - MagicDI won't
+
+// Singleton IDisposables are also not tracked
+// When your application shuts down, you need to handle cleanup manually
+```
+
+Implementing disposal tracking would require either scoped containers (where disposing the scope disposes all transients created within it) or a container-level `Dispose()` that tracks every transient created.
+
+### Fixed Constructor Selection
+
+Always selects the constructor with the most parameters. No way to specify which constructor to use:
+
+```csharp
+public class MyService
+{
+    public MyService() { }                    // Ignored
+    public MyService(IDep dep) { }            // This one is always chosen
+
+    // No [InjectionConstructor] or similar to override
+}
+```
+
+### Ambiguous Implementations Fail
+
+If multiple implementations exist at the same namespace distance, resolution throws rather than letting you choose:
+
+```csharp
+namespace MyApp.Services
+{
+    public class EmailNotifier : INotifier { }
+    public class SmsNotifier : INotifier { }   // Same namespace = ambiguous
+}
+// Resolving INotifier throws InvalidOperationException
+```
+
+### When to Use MagicDI
+
+MagicDI works well for:
+- Simple applications with straightforward dependency graphs
+- Prototypes and experiments where registration overhead isn't worth it
+- Learning DI concepts without ceremony
+
+Use a full-featured container if you need:
+- Scoped lifetimes (web requests, unit of work)
+- Open generic resolution (`IRepository<>` → `Repository<>`)
+- Multiple keyed implementations of the same interface
+- Container-managed disposal
 
 ## Building from Source
 
