@@ -6,11 +6,6 @@ namespace MagicDI
     public enum Lifetime
     {
         /// <summary>
-        /// A new instance is created for each scope.
-        /// </summary>
-        Scoped,
-
-        /// <summary>
         /// A new instance is created every time the dependency is resolved.
         /// </summary>
         Transient,

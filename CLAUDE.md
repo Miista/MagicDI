@@ -40,7 +40,7 @@ The library consists of the following core files in `src/MagicDI/`:
 
 - **ConstructorSelector.cs**: Static helper that selects the most appropriate constructor for a type.
 
-- **Lifetime.cs**: Enum defining Singleton, Transient, and Scoped lifetimes.
+- **Lifetime.cs**: Enum defining Singleton and Transient lifetimes.
 
 - **LifetimeAttribute.cs**: Attribute for explicitly specifying a class's lifetime.
 
