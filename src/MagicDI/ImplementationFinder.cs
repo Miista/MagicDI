@@ -42,25 +42,92 @@ namespace MagicDI
             {
                 var candidates = FindCandidatesInAssembly(interfaceType, assembly);
 
+                if (candidates.Count == 0)
+                {
+                    // No candidates in this assembly, continue to next
+                    continue;
+                }
+
                 if (candidates.Count == 1)
                 {
                     return candidates[0];
                 }
 
-                if (candidates.Count > 1)
+                // Multiple candidates - use namespace proximity to disambiguate
+                var closest = FindClosestByNamespace(candidates, requestingType);
+                if (closest != null)
                 {
-                    var candidateNames = string.Join(", ", candidates.Select(c => c.FullName));
-                    throw new InvalidOperationException(
-                        $"Multiple implementations found for {interfaceType.FullName}: {candidateNames}. " +
-                        "Cannot resolve ambiguous interface.");
+                    return closest;
                 }
 
-                // No candidates in this assembly, continue to next
+                // Multiple candidates at the same distance - ambiguous
+                var candidateNames = string.Join(", ", candidates.Select(c => c.FullName));
+                throw new InvalidOperationException(
+                    $"Multiple implementations found for {interfaceType.FullName}: {candidateNames}. " +
+                    "Cannot resolve ambiguous interface.");
             }
 
             throw new InvalidOperationException(
                 $"No implementation found for {interfaceType.FullName}. " +
                 "Ensure a concrete class implementing this interface exists.");
+        }
+
+        /// <summary>
+        /// Finds the single closest candidate by namespace distance.
+        /// Returns null if there are multiple candidates at the same minimum distance.
+        /// </summary>
+        private static Type? FindClosestByNamespace(List<Type> candidates, Type? requestingType)
+        {
+            if (requestingType == null)
+            {
+                return null; // No context to determine proximity
+            }
+
+            var withDistances = candidates
+                .Select(c => (Type: c, Distance: GetNamespaceDistance(requestingType, c)))
+                .OrderBy(x => x.Distance)
+                .ToList();
+
+            var minDistance = withDistances[0].Distance;
+            var closestCandidates = withDistances.Where(x => x.Distance == minDistance).ToList();
+
+            if (closestCandidates.Count == 1)
+            {
+                return closestCandidates[0].Type;
+            }
+
+            return null; // Multiple candidates at same distance
+        }
+
+        /// <summary>
+        /// Calculates the namespace distance between two types.
+        /// Distance 0 = same namespace
+        /// Distance increases as namespaces diverge
+        /// </summary>
+        private static int GetNamespaceDistance(Type from, Type to)
+        {
+            var fromParts = (from.Namespace ?? "").Split('.');
+            var toParts = (to.Namespace ?? "").Split('.');
+
+            // Find common prefix length
+            var commonLength = 0;
+            var minLength = Math.Min(fromParts.Length, toParts.Length);
+            for (var i = 0; i < minLength; i++)
+            {
+                if (fromParts[i] == toParts[i])
+                {
+                    commonLength++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            // Distance = steps up from 'from' to common ancestor + steps down to 'to'
+            var stepsUp = fromParts.Length - commonLength;
+            var stepsDown = toParts.Length - commonLength;
+            return stepsUp + stepsDown;
         }
 
         private static IEnumerable<Assembly> GetAssembliesInSearchOrder(Type? requestingType)

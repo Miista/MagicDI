@@ -85,13 +85,40 @@ var service = di.Resolve<IMessageService>(); // Returns EmailService instance
 
 ### Closest-First Resolution Strategy
 
-When resolving an interface, MagicDI searches for implementations in this order:
+When resolving an interface, MagicDI searches for implementations using a "closest first" strategy based on both assembly and namespace proximity:
 
+**Assembly order:**
 1. **Requesting type's assembly** - The assembly containing the class that needs the dependency
 2. **Referenced assemblies** - Assemblies directly referenced by the requesting assembly
 3. **All loaded assemblies** - Fallback to scanning all assemblies in the AppDomain
 
-This means multiple implementations of the same interface can coexist across different assemblies, and each consumer gets the implementation "closest" to it:
+**Namespace proximity (within an assembly):**
+When multiple implementations exist in the same assembly, MagicDI picks the one with the closest namespace to the requesting type:
+- Same namespace = distance 0
+- Parent namespace = distance 1
+- Sibling namespace = distance 2 (up one, down one)
+
+```csharp
+namespace MyApp.Services
+{
+    public class EmailService : IMessageService { }  // Distance 0 from Consumer
+}
+
+namespace MyApp.Providers
+{
+    public class SmsService : IMessageService { }    // Distance 2 from Consumer
+}
+
+namespace MyApp.Services
+{
+    public class Consumer(IMessageService service)   // Gets EmailService (closer)
+    {
+        public IMessageService Service { get; } = service;
+    }
+}
+```
+
+This also works across assemblies - each consumer gets the implementation "closest" to it:
 
 ```csharp
 // In AssemblyA
@@ -103,7 +130,7 @@ public class ServiceB : ISharedService { }
 public class ConsumerB(ISharedService service) { } // Gets ServiceB
 ```
 
-If no implementation exists, or if multiple implementations are found within the same assembly (making the choice ambiguous), an `InvalidOperationException` is thrown with a helpful error message.
+If no implementation exists, or if multiple implementations are at the same distance (making the choice truly ambiguous), an `InvalidOperationException` is thrown with a helpful error message.
 
 ## How It Works
 
@@ -216,7 +243,7 @@ The error message includes the full resolution chain to help you identify and fi
 
 - **Primitive Types**: MagicDI cannot resolve primitive types (int, string, bool, etc.) as they require explicit values
 - **Constructor Selection**: Always selects the constructor with the most parameters
-- **Same-Assembly Ambiguity**: If multiple implementations of an interface exist in the same assembly, resolution fails (implementations across different assemblies work fine)
+- **Ambiguous Implementations**: If multiple implementations of an interface exist at the same distance (same namespace), resolution fails
 - **No Scoped Lifetime**: Scoped lifetime is not currently supported
 
 ## Building from Source
