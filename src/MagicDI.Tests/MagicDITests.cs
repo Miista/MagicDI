@@ -142,17 +142,37 @@ namespace MagicDI.Tests
 
             public class ErrorHandling
             {
-                [Fact]
-                public void Throws_when_resolving_primitive_types()
+                [Theory]
+                [InlineData(typeof(byte))]
+                [InlineData(typeof(sbyte))]
+                [InlineData(typeof(short))]
+                [InlineData(typeof(ushort))]
+                [InlineData(typeof(int))]
+                [InlineData(typeof(uint))]
+                [InlineData(typeof(long))]
+                [InlineData(typeof(ulong))]
+                [InlineData(typeof(float))]
+                [InlineData(typeof(double))]
+                [InlineData(typeof(bool))]
+                [InlineData(typeof(char))]
+                [InlineData(typeof(nint))]
+                [InlineData(typeof(nuint))]
+                public void Throws_when_resolving_primitive_type(Type primitiveType)
                 {
                     // Arrange
                     var di = new MagicDI();
+                    var resolveMethod = typeof(MagicDI).GetMethod(nameof(MagicDI.Resolve))!
+                        .MakeGenericMethod(primitiveType);
 
                     // Act
-                    Action act = () => di.Resolve<int>();
+                    Action act = () => resolveMethod.Invoke(di, null);
 
                     // Assert
-                    act.Should().Throw<InvalidOperationException>(because: "primitive types cannot be instantiated by the container");
+                    // Primitives are value types (not classes), so they fail at the ImplementationFinder stage
+                    // with "No implementation found" rather than the "primitive type" error in InstanceFactory
+                    act.Should().Throw<TargetInvocationException>(because: "reflection wraps exceptions")
+                        .WithInnerException<InvalidOperationException>(
+                            because: "primitive types cannot be instantiated by the container");
                 }
 
                 [Fact]
