@@ -5,7 +5,7 @@ namespace MagicDI
     /// <summary>
     /// Specifies an explicit lifetime for a class, overriding automatic inference.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    [AttributeUsage(AttributeTargets.Class, Inherited = true)]
     public sealed class LifetimeAttribute : Attribute
     {
         /// <summary>

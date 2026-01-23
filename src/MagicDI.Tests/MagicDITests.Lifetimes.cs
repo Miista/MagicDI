@@ -510,6 +510,91 @@ namespace MagicDI.Tests
                 }
             }
 
+            public class AttributeInheritance
+            {
+                [Fact]
+                public void Derived_class_inherits_lifetime_from_base()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - DerivedFromTransient has no attribute but base is Transient
+                    var instance1 = di.Resolve<DerivedFromTransient>();
+                    var instance2 = di.Resolve<DerivedFromTransient>();
+
+                    // Assert
+                    instance1.Should().NotBeSameAs(instance2,
+                        because: "derived class should inherit Transient lifetime from base");
+                }
+
+                [Fact]
+                public void Derived_class_attribute_overrides_base()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - DerivedWithOverride has Singleton, base has Transient
+                    var instance1 = di.Resolve<DerivedWithOverride>();
+                    var instance2 = di.Resolve<DerivedWithOverride>();
+
+                    // Assert
+                    instance1.Should().BeSameAs(instance2,
+                        because: "derived class attribute should override base class attribute");
+                }
+
+                [Fact]
+                public void Abstract_class_lifetime_inherited_by_concrete()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - ConcreteFromAbstract inherits from abstract with Transient
+                    var instance1 = di.Resolve<ConcreteFromAbstract>();
+                    var instance2 = di.Resolve<ConcreteFromAbstract>();
+
+                    // Assert
+                    instance1.Should().NotBeSameAs(instance2,
+                        because: "concrete class should inherit Transient from abstract base");
+                }
+
+                [Fact]
+                public void Multi_level_inheritance_uses_closest_attribute()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act - Level3 has no attr, Level2 has Singleton, Level1 has Transient
+                    var instance1 = di.Resolve<InheritanceLevel3>();
+                    var instance2 = di.Resolve<InheritanceLevel3>();
+
+                    // Assert - should use Level2's Singleton (closest)
+                    instance1.Should().BeSameAs(instance2,
+                        because: "closest attribute in inheritance chain should win");
+                }
+
+                [Lifetime(Lifetime.Transient)]
+                public class BaseWithTransient;
+
+                public class DerivedFromTransient : BaseWithTransient;
+
+                [Lifetime(Lifetime.Singleton)]
+                public class DerivedWithOverride : BaseWithTransient;
+
+                [Lifetime(Lifetime.Transient)]
+                public abstract class AbstractWithTransient;
+
+                public class ConcreteFromAbstract : AbstractWithTransient;
+
+                // Multi-level inheritance chain
+                [Lifetime(Lifetime.Transient)]
+                public class InheritanceLevel1;
+
+                [Lifetime(Lifetime.Singleton)]
+                public class InheritanceLevel2 : InheritanceLevel1;
+
+                public class InheritanceLevel3 : InheritanceLevel2;
+            }
+
             #region Test Helper Classes
 
             public class LeafClass;
