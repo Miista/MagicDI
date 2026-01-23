@@ -53,6 +53,14 @@ namespace MagicDI
         /// <returns>The inferred or explicitly specified lifetime.</returns>
         private Lifetime DetermineLifetime(Type type, Type? requestingType)
         {
+            // Reject value types early with a clear error message
+            if (type.IsValueType)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot resolve instance of type '{type.Name}' because it is a value type. " +
+                    "MagicDI only supports resolving class types.");
+            }
+
             // Resolve interface/abstract to concrete type
             var concreteType = ImplementationFinder.GetConcreteType(type, requestingType);
 

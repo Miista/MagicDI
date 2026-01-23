@@ -168,11 +168,11 @@ namespace MagicDI.Tests
                     Action act = () => resolveMethod.Invoke(di, null);
 
                     // Assert
-                    // Primitives are value types (not classes), so they fail at the ImplementationFinder stage
-                    // with "No implementation found" rather than the "primitive type" error in InstanceFactory
+                    // Primitives are value types, rejected early with clear error message
                     act.Should().Throw<TargetInvocationException>(because: "reflection wraps exceptions")
-                        .WithInnerException<InvalidOperationException>(
-                            because: "primitive types cannot be instantiated by the container");
+                        .WithInnerException<InvalidOperationException>()
+                        .WithMessage("*value type*",
+                            because: "error message should clearly indicate value types are not supported");
                 }
 
                 [Fact]
@@ -200,6 +200,124 @@ namespace MagicDI.Tests
 
                     // Assert
                     act.Should().Throw<TargetInvocationException>(because: "exceptions thrown during construction should propagate to the caller");
+                }
+            }
+
+            public class ValueTypes
+            {
+                [Fact]
+                public void Throws_when_resolving_DateTime()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<DateTime>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*value type*",
+                            because: "error message should clearly indicate value types are not supported");
+                }
+
+                [Fact]
+                public void Throws_when_resolving_Guid()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<Guid>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*value type*",
+                            because: "error message should clearly indicate value types are not supported");
+                }
+
+                [Fact]
+                public void Throws_when_resolving_TimeSpan()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<TimeSpan>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*value type*",
+                            because: "error message should clearly indicate value types are not supported");
+                }
+
+                [Fact]
+                public void Throws_when_resolving_decimal()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<decimal>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*value type*",
+                            because: "error message should clearly indicate value types are not supported");
+                }
+
+                [Fact]
+                public void Throws_when_resolving_custom_struct()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<CustomStruct>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*value type*",
+                            because: "error message should clearly indicate value types are not supported");
+                }
+
+                [Fact]
+                public void Throws_when_resolving_enum()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<DayOfWeek>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*value type*",
+                            because: "enums are value types and should not be resolvable");
+                }
+
+                [Fact]
+                public void Throws_when_class_has_value_type_dependency()
+                {
+                    // Arrange
+                    var di = new MagicDI();
+
+                    // Act
+                    Action act = () => di.Resolve<ClassWithValueTypeDependency>();
+
+                    // Assert
+                    act.Should().Throw<InvalidOperationException>()
+                        .WithMessage("*value type*",
+                            because: "classes with value type dependencies should fail with clear error");
+                }
+
+                public struct CustomStruct
+                {
+                    public int Value { get; set; }
+                }
+
+                public class ClassWithValueTypeDependency(DateTime date)
+                {
+                    public DateTime Date { get; } = date;
                 }
             }
 
