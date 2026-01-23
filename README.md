@@ -10,7 +10,7 @@ MagicDI is a simple yet powerful dependency injection container that uses reflec
 
 - **Automatic Dependency Resolution**: Analyzes constructors and automatically resolves all dependencies recursively
 - **Zero Configuration**: No need to register services manually - MagicDI figures it out
-- **Interface Resolution**: Automatically discovers and resolves interfaces to their implementations
+- **Interface & Abstract Class Resolution**: Automatically discovers and resolves interfaces and abstract classes to their implementations
 - **Lifetime Management**: Supports Singleton and Transient lifetimes with intelligent inference
 - **Circular Dependency Detection**: Detects and reports circular dependencies with helpful error messages
 - **Captive Dependency Validation**: Prevents common lifetime mismatch bugs
@@ -64,9 +64,9 @@ var service = di.Resolve<SomeService>();
 service.SomeMethod();
 ```
 
-## Interface Resolution
+## Interface and Abstract Class Resolution
 
-MagicDI automatically resolves interfaces to their concrete implementations using a "closest first" strategy:
+MagicDI automatically resolves interfaces and abstract classes to their concrete implementations using a "closest first" strategy:
 
 ```csharp
 public interface IMessageService
