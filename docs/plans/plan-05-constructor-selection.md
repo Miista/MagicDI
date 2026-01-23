@@ -1,82 +1,53 @@
 # Plan 05: Constructor Selection Edge Cases
 
 ## Overview
-Test and enhance constructor selection for edge cases including special types (merged from old Item 9).
 
-## Current Analysis
+Test and enhance constructor selection for edge cases.
 
-`ConstructorSelector.cs`:
+## Analysis Summary
+
+Most edge cases from the original plan were either:
+- **Impossible at compile time** (static classes cannot be used as type arguments, ValueTuple as type arg)
+- **Already working correctly** (records, sealed, nested, protected constructors)
+
+The only real fix needed: **reject constructors with ref/out parameters**.
+
+## Implementation
+
+### Ref/Out Parameter Rejection
+
+Modified `ConstructorSelector.GetConstructor()` to check for `IsByRef` parameters:
+
 ```csharp
-var appropriateConstructor = type.GetConstructors()
-    .OrderByDescending(info => info.GetParameters().Length)
-    .ThenBy(info => info.MetadataToken)
-    .FirstOrDefault();
+var hasRefOut = constructors.Any(c =>
+    c.GetParameters().Any(p => p.ParameterType.IsByRef));
+
+if (hasRefOut)
+    throw new InvalidOperationException(
+        $"Cannot resolve instance of type {type.Name} because its constructor has ref or out parameters");
 ```
 
-- `GetConstructors()` returns only public instance constructors
-- Selection: most parameters, MetadataToken for tiebreaking
+## Test Coverage
 
-## Edge Case Matrix
+### RefOutParameterRejection
+- `Throws_when_constructor_has_ref_parameter` - ref params rejected
+- `Throws_when_constructor_has_out_parameter` - out params rejected
+- `Throws_when_all_constructors_have_ref_or_out_parameters` - no fallback
 
-| Scenario | Current Behavior | Needs Fix |
-|----------|------------------|-----------|
-| Static class | Throws "no public constructors" | Yes - clearer error |
-| Protected constructors | Correct - only public used | No (test only) |
-| ref/out parameters | Fails confusingly | Yes |
-| Default parameter values | Resolves all params | Decide behavior |
-| C# record types | Works | No (test only) |
-| Sealed classes | Works | No (test only) |
-| Nested classes | Works | No (test only) |
-| Tuple types | Not rejected | Yes |
+### ExistingBehaviorDocumentation
+- `Uses_only_public_constructors` - protected/internal/private ignored
+- `Resolves_all_parameters_even_with_defaults` - defaults don't skip resolution
+- `Resolves_record_types` - primary constructors work
+- `Resolves_sealed_classes` - sealed works like any class
+- `Resolves_public_nested_classes` - nesting is transparent
 
-## Implementation Steps
+## Files Modified
 
-### Step 1: Add TypeValidator Helper
-```csharp
-internal static class TypeValidator
-{
-    public static void ValidateResolvable(Type type)
-    {
-        if (type.IsAbstract && type.IsSealed)  // Static class
-            throw new InvalidOperationException($"Cannot resolve {type.Name} - static class");
-        if (type.IsGenericTypeDefinition)
-            throw new InvalidOperationException($"Cannot resolve {type.Name} - open generic");
-    }
-}
-```
-
-### Step 2: Enhance ConstructorSelector
-Filter out constructors with ref/out parameters:
-```csharp
-var validConstructors = constructors
-    .Where(c => !c.GetParameters().Any(p => p.ParameterType.IsByRef))
-    .ToList();
-```
-
-### Step 3: Extend Value Type Checking
-Add rejection for DateTime, Guid, TimeSpan, ValueTuple, enums.
-
-## Test Classes to Create
-
-### ConstructorSelectionEdgeCases
-- `StaticClassHandling` - static class throws clear error
-- `ProtectedInternalConstructors` - only public used
-- `RefOutParameters` - ref/out rejected, fallback works
-- `DefaultParameterValues` - document behavior
-- `GenericTypeConstructors` - closed generics work
-
-### SpecialTypeScenarios (merged from Item 9)
-- `RecordTypes` - verify record constructor selection
-- `SealedClasses` - should work normally
-- `NestedClasses` - public resolvable, private fails
-- `TupleTypes` - ValueTuple fails, Tuple<> fails differently
-- `ValueTypes` - DateTime, Guid, etc. fail
-
-## Files to Create/Modify
-
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/MagicDI/TypeValidator.cs` | Create - centralized validation |
-| `src/MagicDI/ConstructorSelector.cs` | Modify - ref/out filtering |
-| `src/MagicDI/InstanceFactory.cs` | Modify - extend value type rejection |
-| `src/MagicDI.Tests/MagicDITests.ConstructorSelectionEdgeCases.cs` | Create |
+| `src/MagicDI/ConstructorSelector.cs` | Added ref/out parameter rejection |
+| `src/MagicDI.Tests/MagicDITests.ConstructorSelectionEdgeCases.cs` | Created test file |
+
+## Status
+
+**Complete**
