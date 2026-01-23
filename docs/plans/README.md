@@ -10,8 +10,8 @@ This directory contains implementation plans for MagicDI features and improvemen
 |-------|------|-------------|------------|--------|
 | 1 | [plan-01](plan-01-remove-scoped-enum.md) | Remove Scoped Enum | Low | Done |
 | 2 | [plan-07](plan-07-additional-primitives.md) | Additional Primitives (test-only) | Low | Done |
-| 3 | [plan-10](plan-10-container-isolation.md) | Container Isolation (test-only) | Low | |
-| 4 | [plan-08](plan-08-exception-recovery.md) | Exception Recovery (test-only) | Low | |
+| 3 | [plan-10](plan-10-container-isolation.md) | Container Isolation (test-only) | Low | Done |
+| 4 | [plan-08](plan-08-exception-recovery.md) | Exception Recovery (test-only) | Low | Done |
 
 ### Phase 2 - Small Fixes
 
