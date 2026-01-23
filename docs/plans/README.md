@@ -18,7 +18,7 @@ This directory contains implementation plans for MagicDI features and improvemen
 | Order | Plan | Description | Complexity | Status |
 |-------|------|-------------|------------|--------|
 | 5 | [plan-06](plan-06-lifetime-attributes.md) | Lifetime Attribute Inheritance | Low | Done |
-| 6 | [plan-02](plan-02-value-types.md) | Value Types (better error messages) | Low |
+| 6 | [plan-02](plan-02-value-types.md) | Value Types (better error messages) | Low | Done |
 
 ### Phase 3 - Medium Improvements
 
