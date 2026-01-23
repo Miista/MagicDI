@@ -2,6 +2,20 @@
 
 This document outlines the implementation plan for supporting generic type resolution in MagicDI.
 
+## Scope
+
+**Supported**: Resolving closed generic interfaces to open generic implementations.
+```csharp
+di.Resolve<IRepository<User>>();  // ✓ Returns Repository<User>
+```
+
+**Not supported**: Resolving open generics directly.
+```csharp
+di.Resolve<IRepository<>>();  // ✗ Not supported (also a compile error)
+```
+
+This is a resolution feature, not a registration feature. MagicDI finds open generic implementations at resolution time and closes them with the requested type arguments.
+
 ## Problem Statement
 
 Currently, when resolving `IRepository<User>`, MagicDI scans assemblies using `IsAssignableFrom`:
