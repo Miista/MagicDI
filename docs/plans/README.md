@@ -22,11 +22,11 @@ This directory contains implementation plans for MagicDI features and improvemen
 
 ### Phase 3 - Medium Improvements
 
-| Order | Plan | Description | Complexity |
-|-------|------|-------------|------------|
-| 7 | [plan-05](plan-05-constructor-selection.md) | Constructor Selection Edge Cases | Medium |
-| 8 | [plan-04](plan-04-implementation-finder.md) | Implementation Finder Edge Cases | Medium |
-| 9 | [plan-09](plan-09-concurrency.md) | Concurrency Edge Cases | Medium |
+| Order | Plan | Description | Complexity | Status |
+|-------|------|-------------|------------|--------|
+| 7 | [plan-05](plan-05-constructor-selection.md) | Constructor Selection Edge Cases | Medium | Done |
+| 8 | [plan-04](plan-04-implementation-finder.md) | Implementation Finder Edge Cases | Medium | |
+| 9 | [plan-09](plan-09-concurrency.md) | Concurrency Edge Cases | Medium | |
 
 ### Phase 4 - Major Features
 
