@@ -31,7 +31,7 @@ public class NotificationService
 When `Resolve<T>()` is called:
 - Check if `T` is `IEnumerable<TElement>` (or `ICollection<T>`, `IList<T>`, `IReadOnlyList<T>`, `IReadOnlyCollection<T>`)
 - Extract `TElement` from the generic argument
-- If `TElement` is an interface or abstract class, proceed with multi-implementation resolution
+- Proceed with enumerable resolution for any `TElement` type (interfaces find all implementations, concrete types return single-element list)
 
 ### 2. Implementation Discovery
 
@@ -118,7 +118,9 @@ public static IReadOnlyList<Type> FindAllImplementations(Type interfaceType, Typ
 Update `src/MagicDI/MagicDI.cs`:
 
 ```csharp
-private static object Resolve(Type type, Type? requestingType)
+// NOTE: This is an INSTANCE method (not static) because it accesses
+// _singletons, _contextStack, _lifetimeResolver, and _instanceFactory
+private object Resolve(Type type, Type? requestingType)
 {
     // NEW: Check for IEnumerable<T> request first
     if (EnumerableResolver.IsEnumerableRequest(type, out var elementType))
@@ -241,3 +243,20 @@ Not in scope for this implementation, but possible future enhancements:
 - Filtering implementations by attribute or convention
 - Ordering implementations by priority attribute
 - `IServiceProvider` compatibility shim
+
+---
+
+## Review Notes (2026-01-22)
+
+### Code Review Findings
+
+1. **Feature Status**: NOT IMPLEMENTED - No `EnumerableResolver.cs` exists, no `FindAllImplementations()` in `ImplementationFinder.cs`
+
+2. **Existing Infrastructure**: The following can be reused:
+   - `ImplementationFinder.GetAssembliesInSearchOrder()` - assembly search order logic
+   - `ImplementationFinder.FindCandidatesInAssembly()` - finds implementations in a single assembly
+   - `MagicDI.Resolve(Type, Type?)` - can be called per-element for individual resolution
+
+3. **Plan Corrections Applied**:
+   - Step 3: Fixed method signature from `static` to instance method (it needs access to `_singletons`, `_contextStack`, etc.)
+   - Step 1: Clarified that enumerable handling applies to all element types, not just interfaces/abstracts
