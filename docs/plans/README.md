@@ -6,12 +6,12 @@ This directory contains implementation plans for MagicDI features and improvemen
 
 ### Phase 1 - Cleanup & Test Coverage (Low Risk)
 
-| Order | Plan | Description | Complexity |
-|-------|------|-------------|------------|
-| 1 | [plan-01](plan-01-remove-scoped-enum.md) | Remove Scoped Enum | Low |
-| 2 | [plan-07](plan-07-additional-primitives.md) | Additional Primitives (test-only) | Low |
-| 3 | [plan-10](plan-10-container-isolation.md) | Container Isolation (test-only) | Low |
-| 4 | [plan-08](plan-08-exception-recovery.md) | Exception Recovery (test-only) | Low |
+| Order | Plan | Description | Complexity | Status |
+|-------|------|-------------|------------|--------|
+| 1 | [plan-01](plan-01-remove-scoped-enum.md) | Remove Scoped Enum | Low | Done |
+| 2 | [plan-07](plan-07-additional-primitives.md) | Additional Primitives (test-only) | Low | Done |
+| 3 | [plan-10](plan-10-container-isolation.md) | Container Isolation (test-only) | Low | |
+| 4 | [plan-08](plan-08-exception-recovery.md) | Exception Recovery (test-only) | Low | |
 
 ### Phase 2 - Small Fixes
 
