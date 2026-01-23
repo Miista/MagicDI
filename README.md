@@ -243,29 +243,18 @@ The error message includes the full resolution chain to help you identify and fi
 
 MagicDI is intentionally minimal. If you need any of the following, use a full-featured container like Microsoft.Extensions.DependencyInjection, Autofac, or Ninject.
 
-### No Registration API
+### No Constructor Parameter Configuration
 
-There's no way to manually register types or configure mappings:
-
-```csharp
-// These patterns don't exist in MagicDI:
-services.AddSingleton<IService, ServiceImpl>();
-services.AddTransient<MyService>();
-container.Register<IFoo>().As<Foo>();
-```
-
-MagicDI discovers everything via reflection. You cannot override its choices.
-
-### No Configuration or Primitive Injection
-
-Cannot inject strings, numbers, connection strings, or configuration values:
+Constructor parameters must be resolvable types. There's no mechanism to provide specific values:
 
 ```csharp
-// This will throw - MagicDI cannot resolve primitives
+// This will throw - MagicDI has no way to know what values to use
 public class ApiClient(string baseUrl, int timeout) { }
-```
 
-If your class needs configuration, you must wrap it in a class or use a different pattern.
+// Workaround: wrap configuration in a resolvable class
+public class ApiConfig { public string BaseUrl { get; set; } public int Timeout { get; set; } }
+public class ApiClient(ApiConfig config) { }
+```
 
 ### No Factory Delegates
 
@@ -291,33 +280,26 @@ using var scope = provider.CreateScope();
 
 ### No Named or Keyed Services
 
-Cannot register multiple implementations of the same type with different keys:
+Cannot have multiple implementations of the same interface distinguished by key:
 
 ```csharp
-// Not possible:
+// Not possible - MagicDI picks implementations by namespace proximity, not by key
 services.AddKeyedSingleton<ICache>("redis", new RedisCache());
 services.AddKeyedSingleton<ICache>("memory", new MemoryCache());
 ```
 
-### No Property or Method Injection
+### No Open Generic Resolution
 
-Only constructor injection. No `[Inject]` attribute on properties:
-
-```csharp
-public class MyService
-{
-    [Inject] // Not supported
-    public ILogger Logger { get; set; }
-}
-```
-
-### No Open Generic Registration
-
-Cannot register open generic types:
+MagicDI cannot automatically close open generic types. If you have `Repository<T> : IRepository<T>`, resolving `IRepository<User>` will fail because the assembly scan finds `Repository<>` (open), not `Repository<User>` (closed):
 
 ```csharp
-// Not possible:
-services.AddTransient(typeof(IRepository<>), typeof(Repository<>));
+public class Repository<T> : IRepository<T> { }
+
+// This fails - MagicDI can't infer that Repository<User> implements IRepository<User>
+var repo = di.Resolve<IRepository<User>>();
+
+// Workaround: define explicit closed types
+public class UserRepository : IRepository<User> { }
 ```
 
 ### No Lazy<T>, Func<T>, or IEnumerable<T>
@@ -345,12 +327,17 @@ services.AddInterceptor<CachingInterceptor>();
 
 ### No Disposal Tracking
 
-The container does not track or dispose transient `IDisposable` instances. You're responsible for disposing them:
+The container does not track or dispose `IDisposable` instances. You're responsible for their lifecycle:
 
 ```csharp
 var connection = di.Resolve<DbConnection>(); // Transient, implements IDisposable
 // You must dispose this yourself - MagicDI won't
+
+// Singleton IDisposables are also not tracked
+// When your application shuts down, you need to handle cleanup manually
 ```
+
+Implementing disposal tracking would require either scoped containers (where disposing the scope disposes all transients created within it) or a container-level `Dispose()` that tracks every transient created.
 
 ### Fixed Constructor Selection
 
@@ -383,14 +370,14 @@ namespace MyApp.Services
 
 MagicDI works well for:
 - Simple applications with straightforward dependency graphs
-- Prototypes and experiments where configuration overhead isn't worth it
-- Learning DI concepts without registration ceremony
+- Prototypes and experiments where registration overhead isn't worth it
+- Learning DI concepts without ceremony
 
 Use a full-featured container if you need:
-- Configuration injection
 - Scoped lifetimes (web requests, unit of work)
-- Multiple implementations of the same interface
-- Fine-grained control over instantiation
+- Open generic resolution (`IRepository<>` → `Repository<>`)
+- Multiple keyed implementations of the same interface
+- Container-managed disposal
 
 ## Building from Source
 
