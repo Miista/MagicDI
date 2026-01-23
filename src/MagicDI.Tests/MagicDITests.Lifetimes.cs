@@ -404,6 +404,112 @@ namespace MagicDI.Tests
                 }
             }
 
+            public class ContainerIsolation
+            {
+                [Fact]
+                public void Singletons_are_isolated_per_container_instance()
+                {
+                    // Arrange
+                    var container1 = new MagicDI();
+                    var container2 = new MagicDI();
+
+                    // Act
+                    var instance1 = container1.Resolve<IsolatedSingleton>();
+                    var instance2 = container2.Resolve<IsolatedSingleton>();
+
+                    // Assert
+                    instance1.Should().NotBeSameAs(instance2,
+                        because: "each container should have its own singleton cache");
+                }
+
+                [Fact]
+                public void Same_container_returns_same_singleton()
+                {
+                    // Arrange
+                    var container = new MagicDI();
+
+                    // Act
+                    var instance1 = container.Resolve<IsolatedSingleton>();
+                    var instance2 = container.Resolve<IsolatedSingleton>();
+
+                    // Assert
+                    instance1.Should().BeSameAs(instance2,
+                        because: "the same container should return the same singleton instance");
+                }
+
+                [Fact]
+                public void Nested_dependencies_are_isolated_per_container()
+                {
+                    // Arrange
+                    var container1 = new MagicDI();
+                    var container2 = new MagicDI();
+
+                    // Act
+                    var parent1 = container1.Resolve<IsolatedParent>();
+                    var parent2 = container2.Resolve<IsolatedParent>();
+
+                    // Assert
+                    parent1.Child.Should().NotBeSameAs(parent2.Child,
+                        because: "nested singleton dependencies should also be isolated per container");
+                }
+
+                [Fact]
+                public void Lifetime_determination_is_isolated_per_container()
+                {
+                    // Arrange
+                    var container1 = new MagicDI();
+                    var container2 = new MagicDI();
+
+                    // Act - resolve the same type from both containers
+                    var instance1a = container1.Resolve<IsolatedSingleton>();
+                    var instance1b = container1.Resolve<IsolatedSingleton>();
+                    var instance2a = container2.Resolve<IsolatedSingleton>();
+                    var instance2b = container2.Resolve<IsolatedSingleton>();
+
+                    // Assert
+                    instance1a.Should().BeSameAs(instance1b,
+                        because: "container1 should cache its own singleton");
+                    instance2a.Should().BeSameAs(instance2b,
+                        because: "container2 should cache its own singleton");
+                    instance1a.Should().NotBeSameAs(instance2a,
+                        because: "containers should not share lifetime state");
+                }
+
+                [Fact]
+                public void Transient_types_create_new_instances_regardless_of_container()
+                {
+                    // Arrange
+                    var container1 = new MagicDI();
+                    var container2 = new MagicDI();
+
+                    // Act
+                    var instance1a = container1.Resolve<IsolatedTransient>();
+                    var instance1b = container1.Resolve<IsolatedTransient>();
+                    var instance2a = container2.Resolve<IsolatedTransient>();
+                    var instance2b = container2.Resolve<IsolatedTransient>();
+
+                    // Assert - all four should be different
+                    instance1a.Should().NotBeSameAs(instance1b,
+                        because: "transient types always create new instances");
+                    instance2a.Should().NotBeSameAs(instance2b,
+                        because: "transient types always create new instances");
+                    instance1a.Should().NotBeSameAs(instance2a,
+                        because: "transient types from different containers are also distinct");
+                }
+
+                public class IsolatedSingleton;
+
+                public class IsolatedParent(IsolatedSingleton child)
+                {
+                    public IsolatedSingleton Child { get; } = child;
+                }
+
+                public class IsolatedTransient : IDisposable
+                {
+                    public void Dispose() { }
+                }
+            }
+
             #region Test Helper Classes
 
             public class LeafClass;
