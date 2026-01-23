@@ -18,7 +18,17 @@ namespace MagicDI
         /// <exception cref="InvalidOperationException">Thrown when the type has no public constructors.</exception>
         public static ConstructorInfo GetConstructor(Type type)
         {
-            var appropriateConstructor = type.GetConstructors()
+            var constructors = type.GetConstructors();
+
+            // Check if any constructor has ref/out parameters
+            var hasRefOut = constructors.Any(c =>
+                c.GetParameters().Any(p => p.ParameterType.IsByRef));
+
+            if (hasRefOut)
+                throw new InvalidOperationException(
+                    $"Cannot resolve instance of type {type.Name} because its constructor has ref or out parameters");
+
+            var appropriateConstructor = constructors
                 .OrderByDescending(info => info.GetParameters().Length)
                 .ThenBy(info => info.MetadataToken)
                 .FirstOrDefault();
